@@ -523,6 +523,10 @@ h1 {
   gap: 0 12px;
 }
 
+.field-span {
+  grid-column: 1 / -1;
+}
+
 .site-grid {
   display: grid;
   grid-template-columns: 1fr;

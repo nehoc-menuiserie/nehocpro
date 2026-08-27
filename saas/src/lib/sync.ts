@@ -1,5 +1,5 @@
 import type { Site } from '../types';
-import { mapSitePhotos, uid } from '../storage';
+import { mapSitePhotos, splitClientName, uid } from '../storage';
 import { PHOTO_PREFIX, cloudPhotoPath, isCloudPhoto, supabase } from './supabase';
 
 export function storagePathFromUri(uri: string): string | null {
@@ -229,6 +229,8 @@ export async function pullSites(): Promise<Site[]> {
       id: String(row.id),
       author: String(row.author || ''),
       clientName: String(row.client_name || ''),
+      clientFirstName: splitClientName(String(row.client_name || '')).clientFirstName,
+      clientLastName: splitClientName(String(row.client_name || '')).clientLastName,
       clientPhone: String(row.client_phone || ''),
       clientEmail: String(row.client_email || ''),
       address: String(row.address || ''),

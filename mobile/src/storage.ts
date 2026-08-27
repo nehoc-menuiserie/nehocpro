@@ -34,6 +34,8 @@ export function createEmptySite(): Site {
     id: uid(),
     author: '',
     clientName: '',
+    clientFirstName: '',
+    clientLastName: '',
     clientPhone: '',
     clientEmail: '',
     address: '',
@@ -50,12 +52,26 @@ function asString(v: unknown) {
   return v == null ? '' : String(v);
 }
 
+export function composeClientName(first: string, last: string) {
+  return [first.trim(), last.trim()].filter(Boolean).join(' ');
+}
+
+export function splitClientName(full: string) {
+  const parts = full.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { clientFirstName: '', clientLastName: '' };
+  if (parts.length === 1) return { clientFirstName: '', clientLastName: parts[0] };
+  return { clientFirstName: parts.slice(0, -1).join(' '), clientLastName: parts[parts.length - 1] };
+}
+
 export function normalizeSite(raw: Partial<Site> & Record<string, unknown>): Site {
   const rooms = Array.isArray(raw.rooms) ? raw.rooms : [];
   return {
     id: asString(raw.id) || uid(),
     author: asString(raw.author),
-    clientName: asString(raw.clientName),
+    clientFirstName: asString(raw.clientFirstName) || splitClientName(asString(raw.clientName)).clientFirstName,
+    clientLastName: asString(raw.clientLastName) || splitClientName(asString(raw.clientName)).clientLastName,
+    clientName:
+      composeClientName(asString(raw.clientFirstName), asString(raw.clientLastName)) || asString(raw.clientName),
     clientPhone: asString(raw.clientPhone),
     clientEmail: asString(raw.clientEmail),
     address: asString(raw.address),

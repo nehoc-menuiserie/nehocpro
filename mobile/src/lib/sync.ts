@@ -1,7 +1,7 @@
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system/legacy';
 import type { Site } from '../types';
-import { uid } from '../storage';
+import { splitClientName, uid } from '../storage';
 import { PHOTO_PREFIX, cloudPhotoPath, isCloudPhoto, supabase } from './supabase';
 
 function localPhoto(uri: string) {
@@ -203,6 +203,8 @@ export async function pullSites(): Promise<Site[]> {
       id: String(row.id),
       author: String(row.author || ''),
       clientName: String(row.client_name || ''),
+      clientFirstName: splitClientName(String(row.client_name || '')).clientFirstName,
+      clientLastName: splitClientName(String(row.client_name || '')).clientLastName,
       clientPhone: String(row.client_phone || ''),
       clientEmail: String(row.client_email || ''),
       address: String(row.address || ''),

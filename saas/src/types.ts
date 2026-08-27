@@ -22,6 +22,8 @@ export type Site = {
   id: string;
   author: string;
   clientName: string;
+  clientFirstName: string;
+  clientLastName: string;
   clientPhone: string;
   clientEmail: string;
   address: string;

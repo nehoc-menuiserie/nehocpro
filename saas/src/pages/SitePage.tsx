@@ -4,7 +4,7 @@ import { PhotoGrid } from '../components/PhotoGrid';
 import { Button, Card, ColorSwatch, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
 import { useCatalog } from '../catalog';
 import { useSites } from '../context';
-import { createEmptyOpening, createEmptyRoom, createEmptySite } from '../storage';
+import { composeClientName, createEmptyOpening, createEmptyRoom, createEmptySite, normalizeSite } from '../storage';
 import type { Opening, Room, Site } from '../types';
 
 export function SitePage() {
@@ -27,7 +27,7 @@ export function SitePage() {
       return;
     }
     setMissing(false);
-    const next = found ? (JSON.parse(JSON.stringify(found)) as Site) : createEmptySite();
+    const next = found ? normalizeSite(JSON.parse(JSON.stringify(found)) as Site) : createEmptySite();
     setSite(next);
     setActiveRoomId(next.rooms[0]?.id || '');
   }, [ready, id, isNew]);
@@ -111,8 +111,8 @@ export function SitePage() {
       alert('Sélectionnez la personne qui effectue le relevé.');
       return false;
     }
-    if (!site.clientName.trim()) {
-      alert('Indiquez le nom du client.');
+    if (!site.clientFirstName.trim() || !site.clientLastName.trim()) {
+      alert('Indiquez le prénom et le nom du client.');
       return false;
     }
     return true;
@@ -171,17 +171,38 @@ export function SitePage() {
         <Card>
           <SectionTitle>Client et chantier</SectionTitle>
           <div className="form-grid">
-            <Field label="Nom du client *">
-              <Input value={site.clientName} onChange={(e) => patch({ clientName: e.target.value })} />
+            <Field label="Prénom *">
+              <Input
+                value={site.clientFirstName}
+                autoComplete="given-name"
+                onChange={(e) =>
+                  patch({
+                    clientFirstName: e.target.value,
+                    clientName: composeClientName(e.target.value, site.clientLastName),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Nom *">
+              <Input
+                value={site.clientLastName}
+                autoComplete="family-name"
+                onChange={(e) =>
+                  patch({
+                    clientLastName: e.target.value,
+                    clientName: composeClientName(site.clientFirstName, e.target.value),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Adresse du chantier" className="field-span">
+              <Input value={site.address} autoComplete="street-address" onChange={(e) => patch({ address: e.target.value })} />
             </Field>
             <Field label="Téléphone">
               <Input value={site.clientPhone} onChange={(e) => patch({ clientPhone: e.target.value })} type="tel" />
             </Field>
             <Field label="E-mail">
               <Input value={site.clientEmail} onChange={(e) => patch({ clientEmail: e.target.value })} type="email" />
-            </Field>
-            <Field label="Adresse du chantier">
-              <Input value={site.address} onChange={(e) => patch({ address: e.target.value })} />
             </Field>
             <Select
               label="Type de chantier"

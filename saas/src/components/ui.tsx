@@ -32,9 +32,9 @@ export function SectionTitle({ children }: { children: ReactNode }) {
   return <h2 className="section-title">{children}</h2>;
 }
 
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
   return (
-    <label className="field">
+    <label className={`field ${className}`.trim()}>
       <span className="label">{label}</span>
       {children}
     </label>

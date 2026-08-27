@@ -15,7 +15,7 @@ import { useCatalog } from '../catalog';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { Button, Card, ColorSwatch, Field, Input, SectionTitle, Select } from '../components/ui';
 import { useSites } from '../context';
-import { createEmptyOpening, createEmptyRoom, createEmptySite } from '../storage';
+import { composeClientName, createEmptyOpening, createEmptyRoom, createEmptySite, normalizeSite } from '../storage';
 import { colors, radius } from '../theme';
 import type { Opening, Room, Site, SiteProps } from '../types';
 
@@ -25,7 +25,7 @@ export function SiteScreen({ navigation, route }: SiteProps) {
   const { labels } = useCatalog();
   const existing = route.params?.siteId ? getSite(route.params.siteId) : undefined;
   const [site, setSite] = useState<Site>(() =>
-    existing ? (JSON.parse(JSON.stringify(existing)) as Site) : createEmptySite()
+    existing ? normalizeSite(JSON.parse(JSON.stringify(existing)) as Site) : createEmptySite()
   );
   const [activeRoomId, setActiveRoomId] = useState(site.rooms[0]?.id || '');
   const [saving, setSaving] = useState(false);
@@ -83,8 +83,8 @@ export function SiteScreen({ navigation, route }: SiteProps) {
       Alert.alert('Relevé', 'Sélectionnez la personne qui effectue le relevé.');
       return false;
     }
-    if (!site.clientName.trim()) {
-      Alert.alert('Relevé', 'Indiquez le nom du client.');
+    if (!site.clientFirstName.trim() || !site.clientLastName.trim()) {
+      Alert.alert('Relevé', 'Indiquez le prénom et le nom du client.');
       return false;
     }
     return true;
@@ -140,8 +140,30 @@ export function SiteScreen({ navigation, route }: SiteProps) {
 
           <Card>
             <SectionTitle>Client et chantier</SectionTitle>
-            <Field label="Nom du client *">
-              <Input value={site.clientName} onChangeText={(clientName) => patch({ clientName })} />
+            <Field label="Prénom *">
+              <Input
+                value={site.clientFirstName}
+                onChangeText={(clientFirstName) =>
+                  patch({
+                    clientFirstName,
+                    clientName: composeClientName(clientFirstName, site.clientLastName),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Nom *">
+              <Input
+                value={site.clientLastName}
+                onChangeText={(clientLastName) =>
+                  patch({
+                    clientLastName,
+                    clientName: composeClientName(site.clientFirstName, clientLastName),
+                  })
+                }
+              />
+            </Field>
+            <Field label="Adresse du chantier">
+              <Input value={site.address} onChangeText={(address) => patch({ address })} />
             </Field>
             <Field label="Téléphone">
               <Input
@@ -157,9 +179,6 @@ export function SiteScreen({ navigation, route }: SiteProps) {
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
-            </Field>
-            <Field label="Adresse du chantier">
-              <Input value={site.address} onChangeText={(address) => patch({ address })} />
             </Field>
             <Select
               label="Type de chantier"

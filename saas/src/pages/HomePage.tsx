@@ -37,7 +37,10 @@ export function HomePage() {
     const q = query.trim().toLowerCase();
     if (!q) return sites;
     return sites.filter((s) =>
-      [s.clientName, s.address, s.author, s.siteType].join(' ').toLowerCase().includes(q)
+      [s.clientName, s.clientFirstName, s.clientLastName, s.address, s.author, s.siteType]
+        .join(' ')
+        .toLowerCase()
+        .includes(q)
     );
   }, [query, sites]);
 
