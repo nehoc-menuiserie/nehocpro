@@ -1,26 +1,9 @@
-import { authorFullName } from './constants';
 import type { Site } from './types';
 
 const PAGE_WIDTH_PX = 794;
 const PAGE_HEIGHT_PX = 1123;
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
-
-export function reportWhatsAppText(site: Site) {
-  const openings = site.rooms.reduce((n, room) => n + room.openings.length, 0);
-  return [
-    'Rapport de visite NEHOC',
-    site.clientName,
-    site.address,
-    `${authorFullName(site.author)} · ${site.rooms.length} pièce(s) · ${openings} menuiserie(s)`,
-  ]
-    .filter((line) => line.trim())
-    .join('\n');
-}
-
-export function whatsappShareUrl(text: string) {
-  return `https://wa.me/?text=${encodeURIComponent(text)}`;
-}
 
 function safeFilename(name: string) {
   const cleaned = name.replace(/[^\p{L}\p{N}\-_ ]/gu, '').trim();
@@ -125,10 +108,9 @@ async function prepareFrame(html: string) {
   return iframe;
 }
 
-export async function shareReportOnWhatsApp(site: Site, html: string) {
+export async function buildReportPdfFile(site: Site, html: string) {
   const { default: html2canvas } = await import('html2canvas');
   const { jsPDF } = await import('jspdf');
-  const text = reportWhatsAppText(site);
   const filename = `Rapport-NEHOC-${safeFilename(site.clientName)}.pdf`;
   const iframe = await prepareFrame(html);
 
@@ -166,15 +148,23 @@ export async function shareReportOnWhatsApp(site: Site, html: string) {
     }
 
     const blob = pdf.output('blob');
-    const file = new File([blob], filename, { type: 'application/pdf' });
-    if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: filename, text });
-      return 'shared' as const;
-    }
-
-    downloadBlob(blob, filename);
-    return 'download' as const;
+    return new File([blob], filename, { type: 'application/pdf' });
   } finally {
     iframe.remove();
   }
+}
+
+export async function sharePdfFile(file: File) {
+  const fresh = new File([file], file.name, { type: 'application/pdf' });
+  if (navigator.share) {
+    try {
+      await navigator.share({ files: [fresh], title: fresh.name });
+      return 'shared' as const;
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return 'shared' as const;
+    }
+  }
+
+  downloadBlob(fresh, fresh.name);
+  return 'saved' as const;
 }
