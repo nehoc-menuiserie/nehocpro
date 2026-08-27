@@ -1,6 +1,0 @@
-{
-  "installCommand": "npm install --prefix saas",
-  "buildCommand": "npm run build --prefix saas",
-  "outputDirectory": "saas/dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-}
