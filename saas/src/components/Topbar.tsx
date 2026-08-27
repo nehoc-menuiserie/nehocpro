@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../auth';
 
 export function Topbar() {
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   return (
     <header className="topbar">
       <NavLink to="/" className="topbar-brand">
@@ -18,11 +18,10 @@ export function Topbar() {
         </NavLink>
         <NavLink to="/site/new">Nouveau</NavLink>
         <NavLink to="/backoffice">Back office</NavLink>
-        {session ? (
-          <span className="topbar-user">{session.user.email}</span>
-        ) : (
-          <NavLink to="/login">Connexion</NavLink>
-        )}
+        {session?.user.email ? <span className="topbar-user">{session.user.email}</span> : null}
+        <button type="button" className="topbar-logout" onClick={() => signOut()}>
+          Déconnexion
+        </button>
       </nav>
     </header>
   );

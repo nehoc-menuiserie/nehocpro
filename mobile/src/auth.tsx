@@ -7,7 +7,6 @@ type AuthContextValue = {
   ready: boolean;
   configured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -37,11 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn: async (email, password) => {
         if (!supabase) throw new Error('Supabase n’est pas configuré.');
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-      },
-      signUp: async (email, password) => {
-        if (!supabase) throw new Error('Supabase n’est pas configuré.');
-        const { error } = await supabase.auth.signUp({ email: email.trim(), password });
         if (error) throw error;
       },
       signOut: async () => {

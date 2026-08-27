@@ -43,7 +43,7 @@ function countOpenings(site: Site) {
 export function HomeScreen({ navigation }: HomeProps) {
   const insets = useSafeAreaInsets();
   const { sites, ready, syncing, remove, replaceAll, syncNow } = useSites();
-  const { session, signOut, configured } = useAuth();
+  const { signOut } = useAuth();
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -123,33 +123,22 @@ export function HomeScreen({ navigation }: HomeProps) {
         <Button title="Importer" variant="outline" onPress={onImport} style={styles.toolBtn} />
       </View>
       <View style={styles.toolbar}>
-        {session ? (
-          <>
-            <Button
-              title={syncing ? 'Sync…' : 'Synchroniser'}
-              variant="secondary"
-              onPress={async () => {
-                try {
-                  setBusy(true);
-                  await syncNow();
-                } catch {
-                  Alert.alert('Cloud', 'Synchronisation impossible. Vérifiez le réseau.');
-                } finally {
-                  setBusy(false);
-                }
-              }}
-              style={styles.toolBtn}
-            />
-            <Button title="Déconnexion" variant="outline" onPress={() => signOut()} style={styles.toolBtn} />
-          </>
-        ) : (
-          <Button
-            title={configured ? 'Connexion cloud' : 'Cloud à configurer'}
-            variant="outline"
-            onPress={() => navigation.navigate('Login')}
-            style={styles.toolBtn}
-          />
-        )}
+        <Button
+          title={syncing ? 'Sync…' : 'Synchroniser'}
+          variant="secondary"
+          onPress={async () => {
+            try {
+              setBusy(true);
+              await syncNow();
+            } catch {
+              Alert.alert('Cloud', 'Synchronisation impossible. Vérifiez le réseau.');
+            } finally {
+              setBusy(false);
+            }
+          }}
+          style={styles.toolBtn}
+        />
+        <Button title="Déconnexion" variant="outline" onPress={() => signOut()} style={styles.toolBtn} />
       </View>
 
       <View style={styles.searchWrap}>

@@ -39,7 +39,6 @@ export type RootStackParamList = {
   Home: undefined;
   Site: { siteId?: string };
   Report: { siteId: string };
-  Login: undefined;
   Backoffice: undefined;
 };
 

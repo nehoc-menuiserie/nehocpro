@@ -27,7 +27,7 @@ function countOpenings(site: Site) {
 export function HomePage() {
   const navigate = useNavigate();
   const { sites, ready, syncing, remove, replaceAll, syncNow } = useSites();
-  const { session, signOut, configured } = useAuth();
+  const { signOut } = useAuth();
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
@@ -104,32 +104,22 @@ export function HomePage() {
         />
       </div>
       <div className="toolbar">
-        {session ? (
-          <>
-            <Button
-              title={syncing ? 'Sync…' : 'Synchroniser'}
-              variant="secondary"
-              disabled={busy}
-              onClick={async () => {
-                try {
-                  setBusy(true);
-                  await syncNow();
-                } catch {
-                  alert('Synchronisation impossible. Vérifiez le réseau.');
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            />
-            <Button title="Déconnexion" variant="outline" onClick={() => signOut()} />
-          </>
-        ) : (
-          <Button
-            title={configured ? 'Connexion cloud' : 'Cloud à configurer'}
-            variant="outline"
-            onClick={() => navigate('/login')}
-          />
-        )}
+        <Button
+          title={syncing ? 'Sync…' : 'Synchroniser'}
+          variant="secondary"
+          disabled={busy}
+          onClick={async () => {
+            try {
+              setBusy(true);
+              await syncNow();
+            } catch {
+              alert('Synchronisation impossible. Vérifiez le réseau.');
+            } finally {
+              setBusy(false);
+            }
+          }}
+        />
+        <Button title="Déconnexion" variant="outline" onClick={() => signOut()} />
       </div>
 
       <input

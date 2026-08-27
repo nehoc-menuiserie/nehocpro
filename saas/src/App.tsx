@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './auth';
+import { AuthProvider, useAuth } from './auth';
 import { CatalogProvider } from './catalog';
 import { Topbar } from './components/Topbar';
 import { SitesProvider, useSites } from './context';
@@ -10,21 +10,35 @@ import { ReportPage } from './pages/ReportPage';
 import { SitePage } from './pages/SitePage';
 
 function Shell() {
-  const { ready } = useSites();
-  if (!ready) {
+  const { session, ready: authReady } = useAuth();
+  const { ready: sitesReady } = useSites();
+
+  if (!authReady) {
     return (
       <div className="boot">
         <div className="spinner" />
       </div>
     );
   }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  if (!sitesReady) {
+    return (
+      <div className="boot">
+        <div className="spinner" />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Topbar />
       <main className="main">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/site/:id" element={<SitePage />} />
           <Route path="/report/:id" element={<ReportPage />} />
           <Route path="/backoffice" element={<BackofficePage />} />
