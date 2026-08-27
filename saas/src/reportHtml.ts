@@ -91,8 +91,7 @@ export async function buildReportHtml(site: Site): Promise<string> {
   const author = dash(authorFullName(site.author));
   const first = general[0] || '';
 
-  const pages: string[] = [];
-  pages.push(`<section class="report-page">
+  const cover = `<section class="report-page report-cover">
     <header class="report-header">${logoImg(logo)}<div class="report-brand"><strong>${author}</strong>Chef de projet<br>Menuiseries aluminium &amp; PVC<br>www.nehoc.fr</div><div class="report-id"><strong>RAPPORT</strong>N° ${reportNo}<br>${date}</div></header>
     <div class="report-title"><h1>VISITE DE CHANTIER</h1><p>Relevé technique préalable à l'établissement du devis</p></div>
     <div class="report-meta"><div><span class="report-label">Client</span><span class="report-value">${dash(site.clientName)}</span></div><div><span class="report-label">Adresse du chantier</span><span class="report-value">${dash(site.address)}</span></div><div><span class="report-label">Type de bien</span><span class="report-value">${dash(site.siteType)}</span></div><div><span class="report-label">Travaux</span><span class="report-value">${dash(site.workType)}</span></div></div>
@@ -100,34 +99,41 @@ export async function buildReportHtml(site: Site): Promise<string> {
     <div class="report-section"><h2 class="report-section-title">Observations générales</h2><div class="report-notes">${dash(site.generalNotes)}</div></div>
     <div class="report-signatures"><div class="report-signature"><strong>Validation client</strong>Date et signature</div><div class="report-signature"><strong>${author}</strong>Chef de projet NEHOC</div></div>
     <footer class="report-footer"><span>NEHOC — Rapport de visite confidentiel</span><span>www.nehoc.fr</span></footer>
-  </section>`);
+  </section>`;
 
-  rooms.forEach((room, ri) => {
-    const openings = room.openings;
-    if (!openings.length && !room.notes) return;
-    const items = openings.length
-      ? openings
-          .map((o, oi) => {
-            const dim = o.width || o.height ? `${dash(o.width)} × ${dash(o.height)} mm` : '—';
-            const thumbs =
-              o.photos.length > 1
-                ? `<div class="report-thumbs">${o.photos
-                    .slice(1, 8)
-                    .map((p) => `<img src="${p}" alt="Photo complémentaire">`)
-                    .join('')}</div>`
-                : '';
-            return `<article class="report-opening"><div class="report-opening-media">${photo(o.photos[0] || '', 'report-opening-photo')}${thumbs}</div><div><div class="report-opening-title"><h3>${dash(o.type)} ${o.ref ? `— ${esc(o.ref)}` : ''}</h3><span class="report-badge">Menuiserie ${oi + 1}/${openings.length}</span></div><div class="report-specs"><div class="report-spec"><b>Dimensions</b><span>${dim}</span></div><div class="report-spec"><b>Quantité</b><span>${dash(o.quantity)}</span></div><div class="report-spec"><b>Type de pose</b><span>${dash(o.pose)}</span></div><div class="report-spec report-spec-color"><b>Couleur</b>${colorSwatch(o.colorRal)}</div><div class="report-spec"><b>Pièce</b><span>${dash(room.name)}</span></div></div><p class="report-opening-notes"><strong>Observations :</strong> ${dash(o.notes)}</p></div></article>`;
-          })
-          .join('')
-      : '<div class="report-notes" style="margin-top:5mm">Aucune menuiserie renseignée.</div>';
-    pages.push(`<section class="report-page"><header class="report-header">${logoImg(logo)}<div class="report-brand"><strong>${author}</strong>Chef de projet<br>www.nehoc.fr</div><div class="report-id"><strong>RELEVÉ</strong>${dash(site.clientName)}<br>${date}</div></header><div class="report-room"><div class="report-room-head"><h2>${dash(room.name || `Pièce ${ri + 1}`)}</h2><span>${openings.length} menuiserie${openings.length > 1 ? 's' : ''}${room.notes ? ` · ${esc(room.notes)}` : ''}</span></div>${items}</div><footer class="report-footer"><span>NEHOC — Rapport de visite</span><span>${ri + 1}</span></footer></section>`);
-  });
+  const roomsHtml = rooms
+    .map((room, ri) => {
+      const openings = room.openings;
+      if (!openings.length && !room.notes) return '';
+      const items = openings.length
+        ? openings
+            .map((o, oi) => {
+              const dim = o.width || o.height ? `${dash(o.width)} × ${dash(o.height)} mm` : '—';
+              const thumbs =
+                o.photos.length > 1
+                  ? `<div class="report-thumbs">${o.photos
+                      .slice(1, 8)
+                      .map((p) => `<img src="${p}" alt="Photo complémentaire">`)
+                      .join('')}</div>`
+                  : '';
+              return `<article class="report-opening"><div class="report-opening-media">${photo(o.photos[0] || '', 'report-opening-photo')}${thumbs}</div><div><div class="report-opening-title"><h3>${dash(o.type)} ${o.ref ? `— ${esc(o.ref)}` : ''}</h3><span class="report-badge">Menuiserie ${oi + 1}/${openings.length}</span></div><div class="report-specs"><div class="report-spec"><b>Dimensions</b><span>${dim}</span></div><div class="report-spec"><b>Quantité</b><span>${dash(o.quantity)}</span></div><div class="report-spec"><b>Type de pose</b><span>${dash(o.pose)}</span></div><div class="report-spec report-spec-color"><b>Couleur</b>${colorSwatch(o.colorRal)}</div><div class="report-spec"><b>Pièce</b><span>${dash(room.name)}</span></div></div><p class="report-opening-notes"><strong>Observations :</strong> ${dash(o.notes)}</p></div></article>`;
+            })
+            .join('')
+        : '<div class="report-notes" style="margin-top:5mm">Aucune menuiserie renseignée.</div>';
+      return `<div class="report-room"><div class="report-room-head"><h2>${dash(room.name || `Pièce ${ri + 1}`)}</h2><span>${openings.length} menuiserie${openings.length > 1 ? 's' : ''}${room.notes ? ` · ${esc(room.notes)}` : ''}</span></div>${items}</div>`;
+    })
+    .join('');
+
+  const flow = roomsHtml
+    ? `<section class="report-page report-flow"><header class="report-header">${logoImg(logo)}<div class="report-brand"><strong>${author}</strong>Chef de projet<br>www.nehoc.fr</div><div class="report-id"><strong>RELEVÉ</strong>${dash(site.clientName)}<br>${date}</div></header>${roomsHtml}<footer class="report-footer"><span>NEHOC — Rapport de visite</span><span>www.nehoc.fr</span></footer></section>`
+    : '';
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Rapport NEHOC — ${esc(site.clientName)}</title><style>
     *{box-sizing:border-box} html,body{margin:0;padding:0;height:auto}
     body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:#181818;background:#fff}
-    .report-page{width:210mm;padding:11mm 13mm 9mm;display:flex;flex-direction:column;break-after:page;page-break-after:always;break-inside:auto}
-    .report-page:last-child{break-after:auto;page-break-after:auto}
+    .report-page{width:210mm;padding:11mm 13mm 9mm;display:flex;flex-direction:column}
+    .report-cover{break-after:page;page-break-after:always}
+    .report-flow{break-after:auto;page-break-after:auto}
     .report-header{display:table;width:100%;padding-bottom:5mm;border-bottom:1px solid #b9b9b9}
     .report-header>*{display:table-cell;vertical-align:middle}
     .report-logo{width:37mm;height:19mm;max-width:37mm;max-height:19mm;object-fit:contain;object-position:left center;display:block}
@@ -154,7 +160,8 @@ export async function buildReportHtml(site: Site): Promise<string> {
     .report-summary-row{padding:2.1mm 0;border-bottom:1px solid #ececec;font-size:8.5pt}.report-summary-row:last-child{border-bottom:0}
     .report-summary-row b{display:block;font-size:7pt;text-transform:uppercase;letter-spacing:.07em;color:#777;margin-bottom:.8mm}
     .report-notes{font-size:8.5pt;line-height:1.45;border:1px solid #ddd;border-radius:3mm;padding:4mm;min-height:18mm;white-space:pre-wrap}
-    .report-room{margin-top:5mm}.report-room-head{display:table;width:100%;padding-bottom:2mm;border-bottom:1px solid #aaa}
+    .report-room{margin-top:8mm}.report-room:first-of-type{margin-top:5mm}
+    .report-room-head{display:table;width:100%;padding-bottom:2mm;border-bottom:1px solid #aaa}
     .report-room-head h2{display:table-cell;font-size:13pt;margin:0;vertical-align:bottom}.report-room-head span{display:table-cell;font-size:8pt;color:#666;text-align:right;vertical-align:bottom}
     .report-opening{display:table;width:100%;padding:4mm 0;border-bottom:1px solid #e5e5e5;break-inside:avoid;page-break-inside:avoid}
     .report-opening>div{display:table-cell;vertical-align:top}
@@ -181,13 +188,14 @@ export async function buildReportHtml(site: Site): Promise<string> {
     @page{size:A4;margin:0}
     @media screen {
       body{background:#ececec}
-      .report-page{min-height:297mm;box-shadow:0 8px 32px rgba(0,0,0,.12);margin:12px auto;background:#fff}
-      .report-signatures{margin-top:auto}
+      .report-page{box-shadow:0 8px 32px rgba(0,0,0,.12);margin:12px auto;background:#fff}
+      .report-cover{min-height:297mm}
+      .report-cover .report-signatures{margin-top:auto}
     }
     @media print {
       html,body{background:#fff;height:auto}
       .report-page{min-height:0;height:auto;margin:0;box-shadow:none;background:#fff}
       .report-signatures{margin-top:8mm}
     }
-  </style></head><body>${pages.join('')}</body></html>`;
+  </style></head><body>${cover}${flow}</body></html>`;
 }
