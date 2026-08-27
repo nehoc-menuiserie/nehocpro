@@ -4,7 +4,7 @@ import { Button } from '../components/ui';
 import { authorFullName } from '../constants';
 import { useSites } from '../context';
 import { buildReportHtml } from '../reportHtml';
-import { buildReportPdfFile, sharePdfFile } from '../shareWhatsApp';
+import { buildReportPdfFromPreview, sharePdfFile } from '../shareWhatsApp';
 
 function WhatsAppIcon() {
   return (
@@ -28,8 +28,8 @@ export function ReportPage() {
   const [busy, setBusy] = useState(true);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState('');
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfHint, setPdfHint] = useState('');
+  const pdfFileRef = useRef<File | null>(null);
 
   const total = useMemo(() => site?.rooms.reduce((n, r) => n + r.openings.length, 0) ?? 0, [site]);
 
@@ -71,21 +71,9 @@ export function ReportPage() {
   }, [site]);
 
   useEffect(() => {
-    if (!site || !html) return;
-    let alive = true;
-    setPdfFile(null);
+    pdfFileRef.current = null;
     setPdfHint('');
-    buildReportPdfFile(site, html)
-      .then((file) => {
-        if (alive) setPdfFile(file);
-      })
-      .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : 'Impossible de préparer le PDF.');
-      });
-    return () => {
-      alive = false;
-    };
-  }, [site, html]);
+  }, [html]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -110,11 +98,14 @@ export function ReportPage() {
   };
 
   const sendWhatsApp = async () => {
-    if (!pdfFile) return;
+    const frame = iframeRef.current;
+    if (!site || !frame?.contentDocument) return;
     setSharing(true);
     setPdfHint('');
     try {
-      const result = await sharePdfFile(pdfFile);
+      const file = pdfFileRef.current ?? (await buildReportPdfFromPreview(frame, site));
+      pdfFileRef.current = file;
+      const result = await sharePdfFile(file);
       if (result === 'saved') {
         setPdfHint('Le PDF a été enregistré. Appuyez encore sur le bouton pour choisir WhatsApp, ou joignez le fichier dans une conversation.');
       }
@@ -166,10 +157,10 @@ export function ReportPage() {
           type="button"
           className="btn btn-whatsapp"
           onClick={sendWhatsApp}
-          disabled={busy || !pdfFile || sharing}
+          disabled={busy || !html || sharing}
         >
           <WhatsAppIcon />
-          {!pdfFile && html ? 'Préparation du PDF…' : 'Envoyer le PDF sur WhatsApp'}
+          {sharing ? 'Préparation du PDF…' : 'Envoyer le PDF sur WhatsApp'}
         </button>
         <p className="hint">
           {pdfHint || 'Choisissez WhatsApp, puis le contact. C’est le PDF du rapport qui part, pas un texte.'}

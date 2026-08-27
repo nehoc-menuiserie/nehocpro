@@ -1,7 +1,5 @@
 import type { Site } from './types';
 
-const PAGE_WIDTH_PX = 794;
-const PAGE_HEIGHT_PX = 1123;
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
 
@@ -28,14 +26,6 @@ function imageMaxBox(img: HTMLImageElement) {
   if (img.classList.contains('report-opening-photo')) return { w: 234, h: 294 };
   if (img.closest('.report-thumbs')) return { w: 68, h: 68 };
   return { w: 430, h: 320 };
-}
-
-async function decodeImage(img: HTMLImageElement) {
-  try {
-    if (!img.complete || !img.naturalWidth) await img.decode();
-  } catch {
-    /* image indisponible */
-  }
 }
 
 function bakeContained(img: HTMLImageElement) {
@@ -70,88 +60,67 @@ function bakeContained(img: HTMLImageElement) {
   img.style.display = 'block';
 }
 
-async function prepareFrame(html: string) {
-  const iframe = document.createElement('iframe');
-  iframe.setAttribute('aria-hidden', 'true');
-  iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:${PAGE_WIDTH_PX}px;height:${PAGE_HEIGHT_PX}px;border:0;background:#fff;`;
-
-  const ready = new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error('Rapport trop long à préparer')), 20000);
-    iframe.onload = () => {
-      window.clearTimeout(timer);
-      resolve();
-    };
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        window.clearTimeout(timer);
+        reject(err);
+      }
+    );
   });
-  document.body.appendChild(iframe);
-  iframe.srcdoc = html;
-  await ready;
-
-  const doc = iframe.contentDocument;
-  if (!doc) {
-    iframe.remove();
-    throw new Error('Impossible de préparer le rapport.');
-  }
-
-  const style = doc.createElement('style');
-  style.textContent = `
-    html, body { width: ${PAGE_WIDTH_PX}px !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
-    .report-page { width: ${PAGE_WIDTH_PX}px !important; min-height: ${PAGE_HEIGHT_PX}px !important; margin: 0 !important; box-shadow: none !important; background: #fff !important; }
-    .report-logo { width: 140px !important; height: auto !important; max-width: 140px !important; max-height: 72px !important; }
-  `;
-  doc.head.appendChild(style);
-
-  const images = Array.from(doc.querySelectorAll('img'));
-  await Promise.all(images.map(decodeImage));
-  images.forEach(bakeContained);
-  await Promise.all(Array.from(doc.querySelectorAll('img')).map(decodeImage));
-
-  return iframe;
 }
 
-export async function buildReportPdfFile(site: Site, html: string) {
+export async function buildReportPdfFromPreview(iframe: HTMLIFrameElement, site: Site) {
   const { default: html2canvas } = await import('html2canvas');
   const { jsPDF } = await import('jspdf');
+  const doc = iframe.contentDocument;
+  const pages = Array.from(doc?.querySelectorAll<HTMLElement>('.report-page') ?? []);
+  if (!pages.length) throw new Error('Aperçu du rapport pas encore prêt.');
+
   const filename = `Rapport-NEHOC-${safeFilename(site.clientName)}.pdf`;
-  const iframe = await prepareFrame(html);
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-  try {
-    const doc = iframe.contentDocument;
-    const pages = Array.from(doc?.querySelectorAll<HTMLElement>('.report-page') ?? []);
-    if (!pages.length) throw new Error('Rapport vide');
-
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-
-    for (let i = 0; i < pages.length; i += 1) {
-      const canvas = await html2canvas(pages[i], {
-        scale: 2,
+  for (let i = 0; i < pages.length; i += 1) {
+    const canvas = await withTimeout(
+      html2canvas(pages[i], {
+        scale: 1.5,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-      });
+        onclone: (_clonedDoc, cloned) => {
+          cloned.querySelectorAll('img').forEach((img) => bakeContained(img));
+        },
+      }),
+      12000,
+      'La préparation du PDF a pris trop de temps.'
+    );
 
-      const ratio = canvas.height / canvas.width;
-      const drawHeight = PAGE_WIDTH_MM * ratio;
-      const image = canvas.toDataURL('image/jpeg', 0.92);
-      if (i > 0) pdf.addPage();
+    const ratio = canvas.height / canvas.width;
+    const drawHeight = PAGE_WIDTH_MM * ratio;
+    const image = canvas.toDataURL('image/jpeg', 0.92);
+    if (i > 0) pdf.addPage();
 
-      if (drawHeight <= PAGE_HEIGHT_MM + 0.5) {
-        pdf.addImage(image, 'JPEG', 0, 0, PAGE_WIDTH_MM, drawHeight);
-      } else {
-        pdf.addImage(image, 'JPEG', 0, 0, PAGE_WIDTH_MM, PAGE_HEIGHT_MM);
-        let offset = PAGE_HEIGHT_MM;
-        while (offset < drawHeight - 0.5) {
-          pdf.addPage();
-          pdf.addImage(image, 'JPEG', 0, -offset, PAGE_WIDTH_MM, drawHeight);
-          offset += PAGE_HEIGHT_MM;
-        }
+    if (drawHeight <= PAGE_HEIGHT_MM + 0.5) {
+      pdf.addImage(image, 'JPEG', 0, 0, PAGE_WIDTH_MM, drawHeight);
+    } else {
+      pdf.addImage(image, 'JPEG', 0, 0, PAGE_WIDTH_MM, PAGE_HEIGHT_MM);
+      let offset = PAGE_HEIGHT_MM;
+      while (offset < drawHeight - 0.5) {
+        pdf.addPage();
+        pdf.addImage(image, 'JPEG', 0, -offset, PAGE_WIDTH_MM, drawHeight);
+        offset += PAGE_HEIGHT_MM;
       }
     }
-
-    const blob = pdf.output('blob');
-    return new File([blob], filename, { type: 'application/pdf' });
-  } finally {
-    iframe.remove();
   }
+
+  const blob = pdf.output('blob');
+  return new File([blob], filename, { type: 'application/pdf' });
 }
 
 export async function sharePdfFile(file: File) {
