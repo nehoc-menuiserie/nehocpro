@@ -100,31 +100,30 @@ export async function buildReportHtml(site: Site): Promise<string> {
 
   rooms.forEach((room, ri) => {
     const openings = room.openings;
-    const chunks: typeof openings[] = [];
-    for (let i = 0; i < openings.length; i += 4) chunks.push(openings.slice(i, i + 4));
-    if (!chunks.length) chunks.push([]);
-    chunks.forEach((chunk, ci) => {
-      const items = chunk
-        .map((o, oi) => {
-          const dim = o.width || o.height ? `${dash(o.width)} × ${dash(o.height)} mm` : '—';
-          const thumbs =
-            o.photos.length > 1
-              ? `<div class="report-thumbs">${o.photos
-                  .slice(1, 5)
-                  .map((p) => `<img src="${p}" alt="Photo complémentaire">`)
-                  .join('')}</div>`
-              : '';
-          return `<article class="report-opening"><div>${photo(o.photos[0] || '', 'report-opening-photo')}${thumbs}</div><div><div class="report-opening-title"><h3>${dash(o.type)} ${o.ref ? `— ${esc(o.ref)}` : ''}</h3><span class="report-badge">Menuiserie ${ci * 4 + oi + 1}/${openings.length}</span></div><div class="report-specs"><div class="report-spec"><b>Dimensions</b><span>${dim}</span></div><div class="report-spec"><b>Quantité</b><span>${dash(o.quantity)}</span></div><div class="report-spec"><b>Type de pose</b><span>${dash(o.pose)}</span></div><div class="report-spec report-spec-color"><b>Couleur</b>${colorSwatch(o.colorRal)}</div><div class="report-spec"><b>Pièce</b><span>${dash(room.name)}</span></div></div><p class="report-opening-notes"><strong>Observations :</strong> ${dash(o.notes)}</p></div></article>`;
-        })
-        .join('');
-      pages.push(`<section class="report-page"><header class="report-header"><img src="${logo}" class="report-logo" alt="NEHOC"><div class="report-brand"><strong>${author}</strong>Chef de projet<br>www.nehoc.fr</div><div class="report-id"><strong>RELEVÉ</strong>${dash(site.clientName)}<br>${date}</div></header><div class="report-room"><div class="report-room-head"><h2>${dash(room.name || `Pièce ${ri + 1}`)}</h2><span>${ci + 1}/${chunks.length}${room.notes ? ` · ${esc(room.notes)}` : ''}</span></div>${items || '<div class="report-notes" style="margin-top:5mm">Aucune menuiserie renseignée.</div>'}</div><footer class="report-footer"><span>NEHOC — Rapport de visite</span><span>${ri + 1}.${ci + 1}</span></footer></section>`);
-    });
+    if (!openings.length && !room.notes) return;
+    const items = openings.length
+      ? openings
+          .map((o, oi) => {
+            const dim = o.width || o.height ? `${dash(o.width)} × ${dash(o.height)} mm` : '—';
+            const thumbs =
+              o.photos.length > 1
+                ? `<div class="report-thumbs">${o.photos
+                    .slice(1, 8)
+                    .map((p) => `<img src="${p}" alt="Photo complémentaire">`)
+                    .join('')}</div>`
+                : '';
+            return `<article class="report-opening"><div class="report-opening-media">${photo(o.photos[0] || '', 'report-opening-photo')}${thumbs}</div><div><div class="report-opening-title"><h3>${dash(o.type)} ${o.ref ? `— ${esc(o.ref)}` : ''}</h3><span class="report-badge">Menuiserie ${oi + 1}/${openings.length}</span></div><div class="report-specs"><div class="report-spec"><b>Dimensions</b><span>${dim}</span></div><div class="report-spec"><b>Quantité</b><span>${dash(o.quantity)}</span></div><div class="report-spec"><b>Type de pose</b><span>${dash(o.pose)}</span></div><div class="report-spec report-spec-color"><b>Couleur</b>${colorSwatch(o.colorRal)}</div><div class="report-spec"><b>Pièce</b><span>${dash(room.name)}</span></div></div><p class="report-opening-notes"><strong>Observations :</strong> ${dash(o.notes)}</p></div></article>`;
+          })
+          .join('')
+      : '<div class="report-notes" style="margin-top:5mm">Aucune menuiserie renseignée.</div>';
+    pages.push(`<section class="report-page"><header class="report-header"><img src="${logo}" class="report-logo" alt="NEHOC"><div class="report-brand"><strong>${author}</strong>Chef de projet<br>www.nehoc.fr</div><div class="report-id"><strong>RELEVÉ</strong>${dash(site.clientName)}<br>${date}</div></header><div class="report-room"><div class="report-room-head"><h2>${dash(room.name || `Pièce ${ri + 1}`)}</h2><span>${openings.length} menuiserie${openings.length > 1 ? 's' : ''}${room.notes ? ` · ${esc(room.notes)}` : ''}</span></div>${items}</div><footer class="report-footer"><span>NEHOC — Rapport de visite</span><span>${ri + 1}</span></footer></section>`);
   });
 
   return `<!doctype html><html><head><meta charset="utf-8"><title>Rapport NEHOC — ${esc(site.clientName)}</title><style>
-    *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:#181818;background:#fff}
-    .report-page{width:210mm;min-height:297mm;padding:12mm 13mm 10mm;position:relative;display:flex;flex-direction:column;page-break-after:always;margin:0 auto}
-    .report-page:last-child{page-break-after:auto}
+    *{box-sizing:border-box} html,body{margin:0;padding:0;height:auto}
+    body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:#181818;background:#fff}
+    .report-page{width:210mm;padding:11mm 13mm 9mm;display:flex;flex-direction:column;break-after:page;page-break-after:always;break-inside:auto}
+    .report-page:last-child{break-after:auto;page-break-after:auto}
     .report-header{display:grid;grid-template-columns:42mm 1fr auto;align-items:center;gap:8mm;padding-bottom:5mm;border-bottom:1px solid #b9b9b9}
     .report-logo{width:37mm;height:19mm;object-fit:contain;object-position:left center}
     .report-brand{font-size:8.5pt;line-height:1.45;color:#555}.report-brand strong{display:block;color:#111;font-size:11pt}
@@ -135,32 +134,45 @@ export async function buildReportHtml(site: Site): Promise<string> {
     .report-label{display:block;text-transform:uppercase;letter-spacing:.08em;font-size:6.8pt;color:#777;margin-bottom:1.2mm}
     .report-value{font-size:9pt;font-weight:650;word-break:break-word}
     .report-section-title{font-size:9pt;text-transform:uppercase;letter-spacing:.11em;margin:0 0 2.5mm;padding-left:2.5mm;border-left:3px solid #181818}
-    .report-overview{display:grid;grid-template-columns:1.25fr .75fr;gap:5mm}
-    .report-main-photo,.report-photo-placeholder{width:100%;height:82mm;border-radius:3mm;object-fit:cover;border:1px solid #d3d3d3;background:#f4f4f4}
+    .report-overview{display:grid;grid-template-columns:1.25fr .75fr;gap:5mm;align-items:start}
+    .report-main-photo{width:100%;height:auto;max-height:85mm;object-fit:contain;object-position:center;border-radius:3mm;border:1px solid #d3d3d3;background:#f4f4f4;display:block}
+    .report-photo-placeholder{width:100%;height:55mm;border-radius:3mm;border:1px solid #d3d3d3;background:#f4f4f4}
     .report-photo-placeholder,.report-opening-placeholder{display:flex;align-items:center;justify-content:center;color:#999;font-size:9pt}
-    .report-summary{border:1px solid #ddd;border-radius:3mm;padding:4mm;min-height:82mm}
+    .report-opening-placeholder{width:58mm;height:40mm;border:1px solid #d7d7d7;border-radius:2mm;background:#f5f5f5}
+    .report-summary{border:1px solid #ddd;border-radius:3mm;padding:4mm}
     .report-summary-row{padding:2.1mm 0;border-bottom:1px solid #ececec;font-size:8.5pt}.report-summary-row:last-child{border-bottom:0}
     .report-summary-row b{display:block;font-size:7pt;text-transform:uppercase;letter-spacing:.07em;color:#777;margin-bottom:.8mm}
-    .report-notes{font-size:8.5pt;line-height:1.45;border:1px solid #ddd;border-radius:3mm;padding:4mm;min-height:24mm;white-space:pre-wrap}
+    .report-notes{font-size:8.5pt;line-height:1.45;border:1px solid #ddd;border-radius:3mm;padding:4mm;min-height:18mm;white-space:pre-wrap}
     .report-room{margin-top:5mm}.report-room-head{display:flex;justify-content:space-between;align-items:end;padding-bottom:2mm;border-bottom:1px solid #aaa}
     .report-room-head h2{font-size:13pt;margin:0}.report-room-head span{font-size:8pt;color:#666}
-    .report-opening{display:grid;grid-template-columns:58mm 1fr;gap:5mm;padding:4mm 0;border-bottom:1px solid #e5e5e5}
-    .report-opening-photo,.report-opening-placeholder{width:58mm;height:43mm;object-fit:cover;border:1px solid #d7d7d7;border-radius:2mm;background:#f5f5f5}
+    .report-opening{display:grid;grid-template-columns:62mm 1fr;gap:5mm;padding:4mm 0;border-bottom:1px solid #e5e5e5;break-inside:avoid;page-break-inside:avoid}
+    .report-opening-media{min-width:0}
+    .report-opening-photo{width:100%;height:auto;max-height:78mm;object-fit:contain;object-position:center;border:1px solid #d7d7d7;border-radius:2mm;background:#f5f5f5;display:block}
     .report-opening-title{display:flex;justify-content:space-between;gap:5mm;align-items:start;margin-bottom:2mm}
-    .report-opening-title h3{margin:0;font-size:11pt}.report-badge{font-size:7pt;border:1px solid #aaa;border-radius:99px;padding:1mm 2.5mm}
+    .report-opening-title h3{margin:0;font-size:11pt}.report-badge{font-size:7pt;border:1px solid #aaa;border-radius:99px;padding:1mm 2.5mm;white-space:nowrap}
     .report-specs{display:grid;grid-template-columns:repeat(4,1fr);gap:2mm}
     .report-spec{background:#f4f4f4;border-radius:1.5mm;padding:2.2mm}.report-spec b{display:block;font-size:6.5pt;text-transform:uppercase;color:#777;margin-bottom:.8mm}
     .report-spec span{font-size:8.2pt;font-weight:650}.report-spec-color{grid-column:span 2}
     .report-color-value{display:flex;align-items:center;gap:2mm;font-size:8.2pt;font-weight:650}
-    .report-color-swatch{width:7mm;height:7mm;border:1px solid #777;border-radius:1.2mm;display:inline-block}
+    .report-color-swatch{width:7mm;height:7mm;border:1px solid #777;border-radius:1.2mm;display:inline-block;flex-shrink:0}
     .report-color-swatch.is-undefined{background:repeating-linear-gradient(135deg,#fff 0 6px,#e7e7e7 6px 12px)!important}
     .report-opening-notes{font-size:8pt;line-height:1.4;margin:2.5mm 0 0;color:#444}
-    .report-thumbs{display:flex;gap:2mm;margin-top:2.5mm}.report-thumbs img{width:18mm;height:13mm;object-fit:cover;border-radius:1mm;border:1px solid #ddd}
-    .report-signatures{margin-top:auto;padding-top:7mm;display:grid;grid-template-columns:1fr 1fr;gap:12mm}
-    .report-signature{border-top:1px solid #999;padding-top:2mm;font-size:7.5pt;color:#666;min-height:20mm}
+    .report-thumbs{display:flex;flex-wrap:wrap;gap:2mm;margin-top:2.5mm}
+    .report-thumbs img{width:18mm;height:auto;max-height:18mm;object-fit:contain;object-position:center;border-radius:1mm;border:1px solid #ddd;background:#f5f5f5}
+    .report-signatures{padding-top:8mm;display:grid;grid-template-columns:1fr 1fr;gap:12mm}
+    .report-signature{border-top:1px solid #999;padding-top:2mm;font-size:7.5pt;color:#666;min-height:18mm}
     .report-signature strong{display:block;color:#222;font-size:8.5pt}
-    .report-footer{margin-top:8mm;border-top:1px solid #ddd;padding-top:2mm;display:flex;justify-content:space-between;font-size:7pt;color:#777}
+    .report-footer{margin-top:6mm;border-top:1px solid #ddd;padding-top:2mm;display:flex;justify-content:space-between;font-size:7pt;color:#777}
     @page{size:A4;margin:0}
-    @media screen { body{background:#ececec} .report-page{box-shadow:0 8px 32px rgba(0,0,0,.12);margin:12px auto;background:#fff} }
+    @media screen {
+      body{background:#ececec}
+      .report-page{min-height:297mm;box-shadow:0 8px 32px rgba(0,0,0,.12);margin:12px auto;background:#fff}
+      .report-signatures{margin-top:auto}
+    }
+    @media print {
+      html,body{background:#fff;height:auto}
+      .report-page{min-height:0;height:auto;margin:0;box-shadow:none;background:#fff}
+      .report-signatures{margin-top:8mm}
+    }
   </style></head><body>${pages.join('')}</body></html>`;
 }
