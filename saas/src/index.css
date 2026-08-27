@@ -292,14 +292,47 @@ h1 {
 }
 
 .site-list li {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 8px;
-  background: var(--card);
-  border: 1px solid var(--border);
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.swipe-row {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: #c62828;
+}
+
+.swipe-row-actions {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 76px;
+  display: flex;
+}
+
+.swipe-delete {
+  flex: 1;
+  border: 0;
+  background: #c62828;
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.swipe-row-front {
+  position: relative;
+  z-index: 1;
+  background: var(--card);
   padding: 12px;
+  touch-action: pan-y;
+  transition: transform 0.18s ease;
+}
+
+.swipe-row-front.is-dragging {
+  transition: none;
 }
 
 .site-card {
