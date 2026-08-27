@@ -1,21 +1,53 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { authorFullName } from '../constants';
 import { useSites } from '../context';
 import { buildReportHtml } from '../reportHtml';
+import { reportWhatsAppText, shareReportOnWhatsApp, whatsappShareUrl } from '../shareWhatsApp';
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+      />
+    </svg>
+  );
+}
 
 export function ReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getSite, ready } = useSites();
   const site = id ? getSite(id) : undefined;
+  const wrapRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [html, setHtml] = useState('');
   const [busy, setBusy] = useState(true);
+  const [sharing, setSharing] = useState(false);
   const [error, setError] = useState('');
+  const [whatsappUrl, setWhatsappUrl] = useState('');
 
   const total = useMemo(() => site?.rooms.reduce((n, r) => n + r.openings.length, 0) ?? 0, [site]);
+
+  const fitPreview = useCallback(() => {
+    const wrap = wrapRef.current;
+    const frame = iframeRef.current;
+    const doc = frame?.contentDocument;
+    if (!wrap || !frame || !doc?.documentElement) return;
+
+    frame.style.transform = 'none';
+    frame.style.width = '210mm';
+    const naturalWidth = frame.offsetWidth || 1;
+    const naturalHeight = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight, 1);
+    frame.style.height = `${naturalHeight}px`;
+
+    const scale = Math.min(1, wrap.clientWidth / naturalWidth);
+    frame.style.transform = `scale(${scale})`;
+    wrap.style.height = `${naturalHeight * scale}px`;
+  }, []);
 
   useEffect(() => {
     if (!site) return;
@@ -37,12 +69,17 @@ export function ReportPage() {
     };
   }, [site]);
 
-  const fitIframe = () => {
-    const frame = iframeRef.current;
-    const doc = frame?.contentDocument;
-    if (!frame || !doc?.documentElement) return;
-    frame.style.height = `${Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight)}px`;
-  };
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const observer = new ResizeObserver(() => fitPreview());
+    observer.observe(wrap);
+    window.addEventListener('resize', fitPreview);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', fitPreview);
+    };
+  }, [fitPreview, html]);
 
   const printPreview = () => {
     const frame = iframeRef.current;
@@ -52,6 +89,32 @@ export function ReportPage() {
     }
     frame.contentWindow.focus();
     frame.contentWindow.print();
+  };
+
+  const openWhatsApp = (url: string) => {
+    const popup = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!popup) setWhatsappUrl(url);
+  };
+
+  const sendWhatsApp = async () => {
+    if (!site) return;
+    const url = whatsappShareUrl(reportWhatsAppText(site));
+    const body = iframeRef.current?.contentDocument?.body;
+    setSharing(true);
+    setWhatsappUrl('');
+    try {
+      if (!body) {
+        openWhatsApp(url);
+        return;
+      }
+      const result = await shareReportOnWhatsApp(site, body);
+      if (result === 'download') openWhatsApp(url);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      openWhatsApp(url);
+    } finally {
+      setSharing(false);
+    }
   };
 
   if (!ready) {
@@ -90,20 +153,37 @@ export function ReportPage() {
 
       <div className="report-actions">
         <Button title="Imprimer / enregistrer en PDF" onClick={printPreview} disabled={busy || !html} />
-        <p className="hint">Dans la fenêtre d’impression, choisissez « Enregistrer au format PDF » pour télécharger le fichier.</p>
+        <button
+          type="button"
+          className="btn btn-whatsapp"
+          onClick={sendWhatsApp}
+          disabled={busy || !html || sharing}
+        >
+          <WhatsAppIcon />
+          {sharing ? 'Préparation du PDF…' : 'Envoyer sur WhatsApp'}
+        </button>
+        {whatsappUrl ? (
+          <a className="btn btn-whatsapp" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+            <WhatsAppIcon />
+            Ouvrir WhatsApp
+          </a>
+        ) : null}
+        <p className="hint">
+          WhatsApp s’ouvre : choisissez le contact. Sur téléphone, le PDF part souvent en pièce jointe.
+        </p>
       </div>
 
       {busy ? <div className="spinner" /> : null}
       {error ? <p className="subtitle">{error}</p> : null}
 
       {html ? (
-        <div className="report-preview-wrap">
+        <div ref={wrapRef} className="report-preview-wrap">
           <iframe
             ref={iframeRef}
             className="report-preview"
             title="Aperçu du rapport PDF"
             srcDoc={html}
-            onLoad={fitIframe}
+            onLoad={fitPreview}
           />
         </div>
       ) : null}

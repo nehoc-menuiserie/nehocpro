@@ -717,41 +717,44 @@ h1 {
 }
 
 .report-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
 .report-actions .hint {
-  margin: 10px 0 0;
+  margin: 4px 0 0;
   text-align: center;
 }
 
+.btn-whatsapp {
+  background: #25d366;
+  color: #fff;
+  gap: 10px;
+}
+
+.btn-whatsapp:hover:not(:disabled) {
+  background: #1ebe57;
+}
+
 .report-preview-wrap {
+  position: relative;
+  width: 100%;
   background: #ececec;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-  max-height: none;
+  overflow: hidden;
 }
 
 .report-preview {
   display: block;
   width: 210mm;
-  min-width: 210mm;
-  min-height: 80vh;
   border: 0;
-  margin: 0 auto;
+  margin: 0;
   background: #ececec;
-}
-
-@media (max-width: 860px) {
-  .report-preview-wrap {
-    margin-left: -16px;
-    margin-right: -16px;
-    border-radius: 0;
-    border-left: 0;
-    border-right: 0;
-  }
+  transform-origin: top left;
+  pointer-events: auto;
 }
 
 .pills {
