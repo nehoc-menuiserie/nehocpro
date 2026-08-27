@@ -99,15 +99,14 @@ export function ReportPage() {
   const sendWhatsApp = async () => {
     if (!site) return;
     const url = whatsappShareUrl(reportWhatsAppText(site));
-    const body = iframeRef.current?.contentDocument?.body;
     setSharing(true);
     setWhatsappUrl('');
     try {
-      if (!body) {
+      if (!html) {
         openWhatsApp(url);
         return;
       }
-      const result = await shareReportOnWhatsApp(site, body);
+      const result = await shareReportOnWhatsApp(site, html);
       if (result === 'download') openWhatsApp(url);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
