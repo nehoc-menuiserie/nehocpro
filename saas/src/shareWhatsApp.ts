@@ -64,6 +64,54 @@ function mountReport(html: string) {
   return host;
 }
 
+async function waitForImages(root: HTMLElement) {
+  const images = Array.from(root.querySelectorAll('img'));
+  await Promise.all(
+    images.map(async (img) => {
+      try {
+        if (!img.complete || !img.naturalWidth) await img.decode();
+      } catch {
+        /* image indisponible */
+      }
+    })
+  );
+}
+
+function maxHeightPx(style: CSSStyleDeclaration) {
+  const value = style.maxHeight;
+  if (!value || value === 'none') return Number.POSITIVE_INFINITY;
+  const n = parseFloat(value);
+  if (!Number.isFinite(n) || n <= 0) return Number.POSITIVE_INFINITY;
+  if (value.includes('mm')) return n * (96 / 25.4);
+  return n;
+}
+
+function preserveImageAspect(root: HTMLElement) {
+  root.querySelectorAll('img').forEach((img) => {
+    const naturalW = img.naturalWidth;
+    const naturalH = img.naturalHeight;
+    if (!naturalW || !naturalH) return;
+
+    const style = getComputedStyle(img);
+    const parentBox = img.parentElement?.getBoundingClientRect();
+    const maxW = Math.max(1, parentBox?.width || img.getBoundingClientRect().width || naturalW);
+    const maxH = maxHeightPx(style);
+    const ratio = naturalW / naturalH;
+    let width = Math.min(maxW, naturalW);
+    let height = width / ratio;
+    if (height > maxH) {
+      height = maxH;
+      width = height * ratio;
+    }
+
+    img.style.setProperty('width', `${Math.round(width)}px`);
+    img.style.setProperty('height', `${Math.round(height)}px`);
+    img.style.maxWidth = 'none';
+    img.style.maxHeight = 'none';
+    img.style.objectFit = 'fill';
+  });
+}
+
 export async function shareReportOnWhatsApp(site: Site, html: string) {
   const { default: html2canvas } = await import('html2canvas');
   const { jsPDF } = await import('jspdf');
@@ -72,6 +120,10 @@ export async function shareReportOnWhatsApp(site: Site, html: string) {
   const host = mountReport(html);
 
   try {
+    await waitForImages(host);
+    void host.offsetHeight;
+    preserveImageAspect(host);
+
     const pages = Array.from(host.querySelectorAll<HTMLElement>('.report-page'));
     if (!pages.length) throw new Error('Rapport vide');
 
@@ -86,6 +138,9 @@ export async function shareReportOnWhatsApp(site: Site, html: string) {
         logging: false,
         backgroundColor: '#ffffff',
         windowWidth: pages[i].scrollWidth,
+        onclone: (_doc, cloned) => {
+          preserveImageAspect(cloned);
+        },
       });
       const imgHeight = (canvas.height * pageWidth) / canvas.width;
       const img = canvas.toDataURL('image/jpeg', 0.92);

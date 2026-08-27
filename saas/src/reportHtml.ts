@@ -61,7 +61,7 @@ function colorSwatch(value: string) {
 }
 
 function photo(src: string, cls: string) {
-  if (src) return `<img class="${cls}" src="${src}" alt="Photo">`;
+  if (src) return `<div class="${cls}-wrap"><img class="${cls}" src="${src}" alt="Photo"></div>`;
   const ph = cls.includes('opening') ? 'report-opening-placeholder' : 'report-photo-placeholder';
   return `<div class="${ph}">Aucune photo</div>`;
 }
@@ -145,7 +145,8 @@ export async function buildReportHtml(site: Site): Promise<string> {
     .report-overview>div{display:table-cell;vertical-align:top}
     .report-overview>div:first-child{width:62%;padding-right:5mm}
     .report-overview>div:last-child{width:38%}
-    .report-main-photo{width:100%;height:auto;max-height:85mm;object-fit:contain;object-position:center;border-radius:3mm;border:1px solid #d3d3d3;background:#f4f4f4;display:block}
+    .report-main-photo-wrap{width:100%;line-height:0}
+    .report-main-photo{max-width:100%;width:auto;height:auto;max-height:85mm;object-fit:contain;object-position:center;border-radius:3mm;border:1px solid #d3d3d3;background:#f4f4f4;display:block}
     .report-photo-placeholder{width:100%;height:55mm;border-radius:3mm;border:1px solid #d3d3d3;background:#f4f4f4}
     .report-photo-placeholder,.report-opening-placeholder{display:flex;align-items:center;justify-content:center;color:#999;font-size:9pt}
     .report-opening-placeholder{width:58mm;height:40mm;border:1px solid #d7d7d7;border-radius:2mm;background:#f5f5f5}
@@ -158,7 +159,8 @@ export async function buildReportHtml(site: Site): Promise<string> {
     .report-opening{display:table;width:100%;padding:4mm 0;border-bottom:1px solid #e5e5e5;break-inside:avoid;page-break-inside:avoid}
     .report-opening>div{display:table-cell;vertical-align:top}
     .report-opening-media{width:62mm;padding-right:5mm}
-    .report-opening-photo{width:100%;height:auto;max-height:78mm;object-fit:contain;object-position:center;border:1px solid #d7d7d7;border-radius:2mm;background:#f5f5f5;display:block}
+    .report-opening-photo-wrap{width:100%;line-height:0}
+    .report-opening-photo{max-width:100%;width:auto;height:auto;max-height:78mm;object-fit:contain;object-position:center;border:1px solid #d7d7d7;border-radius:2mm;background:#f5f5f5;display:block}
     .report-opening-title{display:table;width:100%;margin-bottom:2mm}
     .report-opening-title h3{display:table-cell;margin:0;font-size:11pt;vertical-align:top}.report-badge{display:table-cell;font-size:7pt;border:1px solid #aaa;border-radius:99px;padding:1mm 2.5mm;white-space:nowrap;text-align:right;width:1%;vertical-align:top}
     .report-specs{display:flex;flex-wrap:wrap;gap:2mm}
@@ -169,7 +171,7 @@ export async function buildReportHtml(site: Site): Promise<string> {
     .report-color-swatch.is-undefined{background:repeating-linear-gradient(135deg,#fff 0 6px,#e7e7e7 6px 12px)!important}
     .report-opening-notes{font-size:8pt;line-height:1.4;margin:2.5mm 0 0;color:#444}
     .report-thumbs{display:flex;flex-wrap:wrap;gap:2mm;margin-top:2.5mm}
-    .report-thumbs img{width:18mm;height:auto;max-height:18mm;object-fit:contain;object-position:center;border-radius:1mm;border:1px solid #ddd;background:#f5f5f5}
+    .report-thumbs img{width:auto;height:auto;max-width:18mm;max-height:18mm;object-fit:contain;object-position:center;border-radius:1mm;border:1px solid #ddd;background:#f5f5f5}
     .report-signatures{padding-top:8mm;display:table;width:100%}
     .report-signature{display:table-cell;width:50%;border-top:1px solid #999;padding-top:2mm;padding-right:12mm;font-size:7.5pt;color:#666;min-height:18mm}
     .report-signature:last-child{padding-right:0;padding-left:12mm}
