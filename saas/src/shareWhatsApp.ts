@@ -28,36 +28,37 @@ function imageMaxBox(img: HTMLImageElement) {
   return { w: 430, h: 320 };
 }
 
-function bakeContained(img: HTMLImageElement) {
-  const naturalW = img.naturalWidth;
-  const naturalH = img.naturalHeight;
-  if (!naturalW || !naturalH) return;
+function snapshotLiveImage(liveImg: HTMLImageElement, targetDoc: Document) {
+  const naturalW = liveImg.naturalWidth;
+  const naturalH = liveImg.naturalHeight;
+  if (!naturalW || !naturalH) return null;
 
-  const box = imageMaxBox(img);
+  const box = imageMaxBox(liveImg);
   const scale = Math.min(box.w / naturalW, box.h / naturalH);
   const width = Math.max(1, Math.round(naturalW * scale));
   const height = Math.max(1, Math.round(naturalH * scale));
 
-  const canvas = document.createElement('canvas');
+  const canvas = targetDoc.createElement('canvas');
   canvas.width = width * 2;
   canvas.height = height * 2;
+  canvas.className = liveImg.className;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  canvas.style.display = 'block';
+  canvas.style.maxWidth = '100%';
+
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) return null;
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  img.src = canvas.toDataURL('image/jpeg', 0.92);
-  img.removeAttribute('width');
-  img.removeAttribute('height');
-  img.style.width = `${width}px`;
-  img.style.height = `${height}px`;
-  img.style.maxWidth = 'none';
-  img.style.maxHeight = 'none';
-  img.style.objectFit = 'fill';
-  img.style.display = 'block';
+  try {
+    ctx.drawImage(liveImg, 0, 0, canvas.width, canvas.height);
+  } catch {
+    return null;
+  }
+  return canvas;
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
@@ -87,14 +88,23 @@ export async function buildReportPdfFromPreview(iframe: HTMLIFrameElement, site:
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
   for (let i = 0; i < pages.length; i += 1) {
+    const livePage = pages[i];
+    const liveImages = Array.from(livePage.querySelectorAll('img'));
     const canvas = await withTimeout(
-      html2canvas(pages[i], {
+      html2canvas(livePage, {
         scale: 1.5,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        onclone: (_clonedDoc, cloned) => {
-          cloned.querySelectorAll('img').forEach((img) => bakeContained(img));
+        imageTimeout: 4000,
+        onclone: (clonedDoc, cloned) => {
+          const clonedImages = Array.from(cloned.querySelectorAll('img'));
+          clonedImages.forEach((clonedImg, index) => {
+            const liveImg = liveImages[index];
+            if (!liveImg) return;
+            const snapshot = snapshotLiveImage(liveImg, clonedDoc);
+            if (snapshot) clonedImg.replaceWith(snapshot);
+          });
         },
       }),
       12000,
