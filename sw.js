@@ -1,0 +1,1 @@
+const CACHE='nehocpro-v03',ASSETS=['./','index.html','style.css','app.js','manifest.webmanifest','logo-nehoc.jpeg'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));

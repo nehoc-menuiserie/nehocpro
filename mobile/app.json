@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "NEHOCPRO",
+    "slug": "nehocpro-go",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "nehocprogo",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0B0C"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "NEHOCPRO utilise la caméra pour photographier les menuiseries sur le chantier.",
+        "NSPhotoLibraryUsageDescription": "NEHOCPRO accède à vos photos pour les joindre aux relevés de chantier."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B0C",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

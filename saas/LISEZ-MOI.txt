@@ -1,0 +1,11 @@
+NEHOCPRO — version SaaS (React)
+
+Même appli que mobile : chantiers, pièces, menuiseries, photos, back office, cloud Supabase, rapport PDF.
+
+1. Ouvrez un terminal dans le dossier saas
+2. npm install
+3. npm run dev
+4. Ouvrez http://localhost:5173
+
+Les clés cloud sont dans .env (les mêmes que l’app mobile).
+Le site s’adapte au téléphone, à la tablette et à l’ordinateur.

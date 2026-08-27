@@ -1,0 +1,13 @@
+NEHOCPRO — Application mobile (Expo Go)
+
+L’app est en Expo SDK 54, compatible avec Expo Go de l’App Store / Play Store.
+
+1. Installez « Expo Go » sur le téléphone.
+2. Dans le dossier mobile, arrêtez l’ancien serveur (Ctrl+C) puis :
+     npx expo start --clear
+3. Téléphone et Mac sur le même Wi-Fi.
+4. Scannez le QR code avec Expo Go (Android) ou l’appareil photo (iPhone).
+
+Si ça échoue encore :
+     npx expo start --tunnel
+
