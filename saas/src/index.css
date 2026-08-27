@@ -716,6 +716,44 @@ h1 {
   color: var(--muted);
 }
 
+.report-actions {
+  margin-bottom: 16px;
+}
+
+.report-actions .hint {
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+.report-preview-wrap {
+  background: #ececec;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: none;
+}
+
+.report-preview {
+  display: block;
+  width: 210mm;
+  min-width: 210mm;
+  min-height: 80vh;
+  border: 0;
+  margin: 0 auto;
+  background: #ececec;
+}
+
+@media (max-width: 860px) {
+  .report-preview-wrap {
+    margin-left: -16px;
+    margin-right: -16px;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+}
+
 .pills {
   display: grid;
   grid-template-columns: 1fr 1fr;

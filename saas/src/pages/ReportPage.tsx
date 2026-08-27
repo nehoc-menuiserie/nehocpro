@@ -1,19 +1,58 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button, ColorSwatch } from '../components/ui';
-import { SmartPhoto } from '../components/SmartPhoto';
+import { Button } from '../components/ui';
 import { authorFullName } from '../constants';
 import { useSites } from '../context';
-import { buildReportHtml, printReport } from '../reportHtml';
+import { buildReportHtml } from '../reportHtml';
 
 export function ReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getSite, ready } = useSites();
   const site = id ? getSite(id) : undefined;
-  const [busy, setBusy] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [html, setHtml] = useState('');
+  const [busy, setBusy] = useState(true);
+  const [error, setError] = useState('');
 
   const total = useMemo(() => site?.rooms.reduce((n, r) => n + r.openings.length, 0) ?? 0, [site]);
+
+  useEffect(() => {
+    if (!site) return;
+    let alive = true;
+    setBusy(true);
+    setError('');
+    buildReportHtml(site)
+      .then((next) => {
+        if (alive) setHtml(next);
+      })
+      .catch((err) => {
+        if (alive) setError(err instanceof Error ? err.message : 'Impossible de générer le rapport.');
+      })
+      .finally(() => {
+        if (alive) setBusy(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [site]);
+
+  const fitIframe = () => {
+    const frame = iframeRef.current;
+    const doc = frame?.contentDocument;
+    if (!frame || !doc?.documentElement) return;
+    frame.style.height = `${Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight)}px`;
+  };
+
+  const printPreview = () => {
+    const frame = iframeRef.current;
+    if (!frame?.contentWindow) {
+      alert('L’aperçu n’est pas encore prêt.');
+      return;
+    }
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  };
 
   if (!ready) {
     return (
@@ -32,94 +71,42 @@ export function ReportPage() {
     );
   }
 
-  const sharePdf = async () => {
-    try {
-      setBusy(true);
-      const html = await buildReportHtml(site);
-      printReport(html);
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Impossible de générer le rapport.');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   return (
     <div className="page report-page">
       <header className="page-head">
         <Button title="← Chantier" variant="ghost" onClick={() => navigate(`/site/${site.id}`)} />
-        <h1>Rapport</h1>
+        <h1>Aperçu du rapport</h1>
         <span />
       </header>
 
       <div className="report-hero">
-        <img src="/logo-nehoc.jpeg" alt="NEHOC" className="logo" />
         <p className="kicker">Visite de chantier</p>
         <h2>{site.clientName}</h2>
-        <p>{site.address || 'Adresse non renseignée'}</p>
         <p>
-          {authorFullName(site.author)} · {site.siteType} · {site.workType}
+          {authorFullName(site.author)} · {site.rooms.length} pièce{site.rooms.length > 1 ? 's' : ''} · {total}{' '}
+          menuiserie{total > 1 ? 's' : ''}
         </p>
       </div>
 
-      <div className="pills">
-        <div className="pill">
-          <strong>{site.rooms.length}</strong>
-          <span>Pièces</span>
-        </div>
-        <div className="pill">
-          <strong>{total}</strong>
-          <span>Menuiseries</span>
-        </div>
+      <div className="report-actions">
+        <Button title="Imprimer / enregistrer en PDF" onClick={printPreview} disabled={busy || !html} />
+        <p className="hint">Dans la fenêtre d’impression, choisissez « Enregistrer au format PDF » pour télécharger le fichier.</p>
       </div>
 
-      {site.generalPhotos[0] ? <SmartPhoto src={site.generalPhotos[0]} className="cover" /> : null}
-
-      {site.generalNotes ? (
-        <section className="card">
-          <h3>Observations</h3>
-          <p className="notes">{site.generalNotes}</p>
-        </section>
-      ) : null}
-
-      {site.rooms.map((room) => (
-        <section key={room.id} className="card">
-          <h3>{room.name || 'Pièce'}</h3>
-          {room.notes ? <p className="notes">{room.notes}</p> : null}
-          {room.openings.map((op) => (
-            <div key={op.id} className="report-opening-row">
-              {op.photos[0] ? (
-                <SmartPhoto src={op.photos[0]} className="op-photo" />
-              ) : (
-                <div className="op-photo empty">Sans photo</div>
-              )}
-              <div>
-                <strong>
-                  {op.type}
-                  {op.ref ? ` — ${op.ref}` : ''}
-                </strong>
-                <p>
-                  {op.width || op.height ? `${op.width || '—'} × ${op.height || '—'} mm` : 'Dimensions à définir'}
-                  {' · '}qté {op.quantity || '1'}
-                </p>
-                <p>{op.pose}</p>
-                <div className="color-line">
-                  <ColorSwatch value={op.colorRal} size={18} />
-                  <span>{op.colorRal || 'Couleur à définir'}</span>
-                </div>
-                {op.notes ? <p className="notes">{op.notes}</p> : null}
-              </div>
-            </div>
-          ))}
-        </section>
-      ))}
-
-      <Button
-        title={busy ? 'Génération du PDF…' : 'Imprimer / enregistrer le PDF'}
-        onClick={sharePdf}
-        disabled={busy}
-      />
       {busy ? <div className="spinner" /> : null}
+      {error ? <p className="subtitle">{error}</p> : null}
+
+      {html ? (
+        <div className="report-preview-wrap">
+          <iframe
+            ref={iframeRef}
+            className="report-preview"
+            title="Aperçu du rapport PDF"
+            srcDoc={html}
+            onLoad={fitIframe}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

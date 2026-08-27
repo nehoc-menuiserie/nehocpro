@@ -164,14 +164,3 @@ export async function buildReportHtml(site: Site): Promise<string> {
     @media screen { body{background:#ececec} .report-page{box-shadow:0 8px 32px rgba(0,0,0,.12);margin:12px auto;background:#fff} }
   </style></head><body>${pages.join('')}</body></html>`;
 }
-
-export function printReport(html: string) {
-  const w = window.open('', '_blank');
-  if (!w) {
-    throw new Error('Autorisez les fenêtres pop-up pour imprimer le PDF.');
-  }
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => w.print(), 400);
-}
