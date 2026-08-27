@@ -86,6 +86,20 @@ export function normalizeSite(raw: Partial<Site> & Record<string, unknown>): Sit
   };
 }
 
+export function mapSitePhotos(site: Site, fn: (uri: string) => string): Site {
+  return {
+    ...site,
+    generalPhotos: site.generalPhotos.map(fn).filter(Boolean),
+    rooms: site.rooms.map((room) => ({
+      ...room,
+      openings: room.openings.map((op) => ({
+        ...op,
+        photos: op.photos.map(fn).filter(Boolean),
+      })),
+    })),
+  };
+}
+
 export function loadSites(): Site[] {
   try {
     const raw = localStorage.getItem(KEY);

@@ -122,9 +122,12 @@ export function SitePage() {
     if (!validate()) return;
     setSaving(true);
     try {
-      await upsert(site);
-      alert('Le chantier a été enregistré.');
-      if (isNew) navigate(`/site/${site.id}`, { replace: true });
+      const saved = await upsert(site);
+      setSite(saved);
+      alert('Le chantier et les photos ont été enregistrés dans le cloud.');
+      if (isNew) navigate(`/site/${saved.id}`, { replace: true });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Enregistrement impossible. Vérifiez le réseau et réessayez.');
     } finally {
       setSaving(false);
     }
@@ -132,8 +135,13 @@ export function SitePage() {
 
   const onReport = async () => {
     if (!validate()) return;
-    await upsert(site);
-    navigate(`/report/${site.id}`);
+    try {
+      const saved = await upsert(site);
+      setSite(saved);
+      navigate(`/report/${saved.id}`);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Enregistrement impossible. Vérifiez le réseau et réessayez.');
+    }
   };
 
   return (
@@ -196,7 +204,7 @@ export function SitePage() {
 
       <Card>
         <SectionTitle>Photos générales</SectionTitle>
-        <PhotoGrid uris={site.generalPhotos} onChange={(generalPhotos) => patch({ generalPhotos })} />
+        <PhotoGrid siteId={site.id} uris={site.generalPhotos} onChange={(generalPhotos) => patch({ generalPhotos })} />
       </Card>
 
       <div className="section-head">
@@ -303,7 +311,11 @@ export function SitePage() {
                   onChange={(e) => updateOpening(room.id, op.id, { notes: e.target.value })}
                 />
               </Field>
-              <PhotoGrid uris={op.photos} onChange={(photos) => updateOpening(room.id, op.id, { photos })} />
+              <PhotoGrid
+                siteId={site.id}
+                uris={op.photos}
+                onChange={(photos) => updateOpening(room.id, op.id, { photos })}
+              />
             </div>
           ))}
           <Button title="+ Ajouter une menuiserie" variant="secondary" onClick={() => addOpening(room.id)} />

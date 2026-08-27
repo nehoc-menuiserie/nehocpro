@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from './auth';
-import { deleteCloudSite, mergeSites, pullSites, pushSite } from './lib/sync';
+import { deleteCloudSite, mergeSites, persistableSite, pullSites, pushSite } from './lib/sync';
 import { isSupabaseConfigured } from './lib/supabase';
 import { loadSites, saveSites } from './storage';
 import type { Site } from './types';
@@ -9,7 +9,7 @@ type SitesContextValue = {
   sites: Site[];
   ready: boolean;
   syncing: boolean;
-  upsert: (site: Site) => Promise<void>;
+  upsert: (site: Site) => Promise<Site>;
   remove: (id: string) => Promise<void>;
   replaceAll: (next: Site[]) => Promise<void>;
   getSite: (id: string) => Site | undefined;
@@ -25,13 +25,17 @@ export function SitesProvider({ children }: { children: ReactNode }) {
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    setSites(loadSites());
+    setSites(loadSites().map(persistableSite));
     setReady(true);
   }, []);
 
   const persist = useCallback(async (next: Site[]) => {
-    setSites(next);
-    saveSites(next);
+    setSites(next.map(persistableSite));
+    try {
+      saveSites(next.map(persistableSite));
+    } catch {
+      saveSites(next.map(persistableSite));
+    }
   }, []);
 
   const syncNow = useCallback(async () => {
@@ -41,10 +45,11 @@ export function SitesProvider({ children }: { children: ReactNode }) {
       const remote = await pullSites();
       const local = loadSites();
       const merged = mergeSites(local, remote);
-      await persist(merged);
+      const uploaded: Site[] = [];
       for (const site of merged) {
-        await pushSite(site);
+        uploaded.push(await pushSite(site));
       }
+      await persist(uploaded);
     } finally {
       setSyncing(false);
     }
@@ -59,15 +64,10 @@ export function SitesProvider({ children }: { children: ReactNode }) {
   const upsert = useCallback(
     async (site: Site) => {
       const stamped = { ...site, updatedAt: new Date().toISOString() };
-      const next = [stamped, ...sites.filter((s) => s.id !== stamped.id)];
+      const uploaded = session ? await pushSite(stamped) : persistableSite(stamped);
+      const next = [uploaded, ...sites.filter((s) => s.id !== uploaded.id)];
       await persist(next);
-      if (session) {
-        try {
-          await pushSite(stamped);
-        } catch {
-          /* hors-ligne */
-        }
-      }
+      return persistableSite(uploaded);
     },
     [persist, session, sites]
   );

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, ColorSwatch } from '../components/ui';
+import { SmartPhoto } from '../components/SmartPhoto';
 import { authorFullName } from '../constants';
 import { useSites } from '../context';
 import { buildReportHtml, printReport } from '../reportHtml';
@@ -72,7 +73,7 @@ export function ReportPage() {
         </div>
       </div>
 
-      {site.generalPhotos[0] ? <img src={site.generalPhotos[0]} alt="" className="cover" /> : null}
+      {site.generalPhotos[0] ? <SmartPhoto src={site.generalPhotos[0]} className="cover" /> : null}
 
       {site.generalNotes ? (
         <section className="card">
@@ -88,7 +89,7 @@ export function ReportPage() {
           {room.openings.map((op) => (
             <div key={op.id} className="report-opening-row">
               {op.photos[0] ? (
-                <img src={op.photos[0]} alt="" className="op-photo" />
+                <SmartPhoto src={op.photos[0]} className="op-photo" />
               ) : (
                 <div className="op-photo empty">Sans photo</div>
               )}

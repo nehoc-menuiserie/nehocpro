@@ -1,14 +1,38 @@
 import type { Site } from '../types';
-import { uid } from '../storage';
+import { mapSitePhotos, uid } from '../storage';
 import { PHOTO_PREFIX, cloudPhotoPath, isCloudPhoto, supabase } from './supabase';
 
-function dataUrlToBlob(dataUrl: string) {
-  const [header, body] = dataUrl.split(',');
-  const mime = header.match(/data:(.*?);/)?.[1] || 'image/jpeg';
-  const binary = atob(body || '');
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
+export function storagePathFromUri(uri: string): string | null {
+  if (!uri) return null;
+  if (isCloudPhoto(uri)) {
+    const path = cloudPhotoPath(uri);
+    if (path.startsWith('http')) return storagePathFromUri(path);
+    return path.replace(/^\/+/, '') || null;
+  }
+  try {
+    const parsed = new URL(uri);
+    const match = parsed.pathname.match(
+      /\/storage\/v1\/object\/(?:sign|public|authenticated)\/site-photos\/(.+)/
+    );
+    if (match?.[1]) return decodeURIComponent(match[1]);
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function cloudRef(path: string) {
+  return `${PHOTO_PREFIX}${path.replace(/^\/+/, '')}`;
+}
+
+function isRealStoragePath(path: string) {
+  return Boolean(path) && !path.startsWith('data:') && !path.startsWith('http') && !path.startsWith('blob:');
+}
+
+async function toBlob(uri: string) {
+  const res = await fetch(uri);
+  if (!res.ok) throw new Error('Lecture de la photo impossible.');
+  return res.blob();
 }
 
 async function signedUrl(path: string) {
@@ -21,45 +45,47 @@ async function signedUrl(path: string) {
 
 export async function resolvePhotoUri(uri: string) {
   if (!uri) return uri;
-  if (isCloudPhoto(uri)) return signedUrl(cloudPhotoPath(uri));
+  const path = storagePathFromUri(uri);
+  if (path) return signedUrl(path);
+  if (uri.startsWith('data:') || uri.startsWith('blob:') || uri.startsWith('http')) return uri;
   return uri;
 }
 
-async function uploadPhoto(userId: string, siteId: string, uri: string) {
-  if (!supabase) return uri;
-  if (isCloudPhoto(uri)) return uri;
-  if (uri.startsWith('http') && !uri.startsWith('data:')) return uri;
+export async function ensureCloudPhoto(siteId: string, uri: string) {
+  if (!supabase || !uri) return uri;
+  const existing = storagePathFromUri(uri);
+  if (existing && isRealStoragePath(existing)) return cloudRef(existing);
 
-  let blob: Blob;
-  if (uri.startsWith('data:')) blob = dataUrlToBlob(uri);
-  else {
-    const res = await fetch(uri);
-    blob = await res.blob();
-  }
-  const path = `${userId}/${siteId}/${uid()}.jpg`;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Connectez-vous pour enregistrer les photos.');
+
+  const blob = await toBlob(uri);
+  const path = `${user.id}/${siteId}/${uid()}.jpg`;
   const { error } = await supabase.storage.from('site-photos').upload(path, blob, {
     contentType: blob.type || 'image/jpeg',
     upsert: true,
   });
   if (error) throw error;
-  return `${PHOTO_PREFIX}${path}`;
+  return cloudRef(path);
 }
 
 export async function pushSite(site: Site) {
-  if (!supabase) return;
+  if (!supabase) return site;
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return site;
 
-  const generalPhotos = await Promise.all(site.generalPhotos.map((uri) => uploadPhoto(user.id, site.id, uri)));
+  const generalPhotos = await Promise.all(site.generalPhotos.map((uri) => ensureCloudPhoto(site.id, uri)));
   const rooms = await Promise.all(
     site.rooms.map(async (room) => ({
       ...room,
       openings: await Promise.all(
         room.openings.map(async (op) => ({
           ...op,
-          photos: await Promise.all(op.photos.map((uri) => uploadPhoto(user.id, site.id, uri))),
+          photos: await Promise.all(op.photos.map((uri) => ensureCloudPhoto(site.id, uri))),
         }))
       ),
     }))
@@ -122,7 +148,7 @@ export async function pushSite(site: Site) {
       site_id: site.id,
       opening_id: null as string | null,
       kind: 'general',
-      storage_path: isCloudPhoto(ref) ? cloudPhotoPath(ref) : ref,
+      storage_path: storagePathFromUri(ref) || '',
       position: i,
     })),
     ...rooms.flatMap((room) =>
@@ -132,12 +158,12 @@ export async function pushSite(site: Site) {
           site_id: site.id,
           opening_id: op.id,
           kind: 'opening',
-          storage_path: isCloudPhoto(ref) ? cloudPhotoPath(ref) : ref,
+          storage_path: storagePathFromUri(ref) || '',
           position: i,
         }))
       )
     ),
-  ].filter((p) => p.storage_path);
+  ].filter((p) => isRealStoragePath(p.storage_path));
 
   if (photoRows.length) {
     const { error } = await supabase.from('photos').insert(photoRows);
@@ -150,6 +176,11 @@ export async function pushSite(site: Site) {
 export async function deleteCloudSite(id: string) {
   if (!supabase) return;
   await supabase.from('sites').delete().eq('id', id);
+}
+
+function asCloudRef(storagePath: string) {
+  const path = storagePathFromUri(storagePath) || storagePath;
+  return isRealStoragePath(path) ? cloudRef(path) : '';
 }
 
 export async function pullSites(): Promise<Site[]> {
@@ -166,7 +197,7 @@ export async function pullSites(): Promise<Site[]> {
     : { data: [] };
   const { data: photoRows } = await supabase.from('photos').select('*').in('site_id', siteIds);
 
-  const sites = siteRows.map((row) => {
+  return siteRows.map((row) => {
     const rooms = (roomRows || [])
       .filter((r) => r.site_id === row.id)
       .sort((a, b) => (a.position as number) - (b.position as number))
@@ -190,7 +221,8 @@ export async function pullSites(): Promise<Site[]> {
             photos: (photoRows || [])
               .filter((p) => p.opening_id === op.id && p.kind === 'opening')
               .sort((a, b) => (a.position as number) - (b.position as number))
-              .map((p) => `${PHOTO_PREFIX}${p.storage_path}`),
+              .map((p) => asCloudRef(String(p.storage_path || '')))
+              .filter(Boolean),
           })),
       }));
     return {
@@ -207,34 +239,29 @@ export async function pullSites(): Promise<Site[]> {
       generalPhotos: (photoRows || [])
         .filter((p) => p.site_id === row.id && p.kind === 'general')
         .sort((a, b) => (a.position as number) - (b.position as number))
-        .map((p) => `${PHOTO_PREFIX}${p.storage_path}`),
+        .map((p) => asCloudRef(String(p.storage_path || '')))
+        .filter(Boolean),
       rooms,
     } satisfies Site;
   });
-
-  return Promise.all(sites.map(hydrateSitePhotos));
-}
-
-async function hydrateSitePhotos(site: Site): Promise<Site> {
-  return {
-    ...site,
-    generalPhotos: await Promise.all(site.generalPhotos.map(resolvePhotoUri)),
-    rooms: await Promise.all(
-      site.rooms.map(async (room) => ({
-        ...room,
-        openings: await Promise.all(
-          room.openings.map(async (op) => ({
-            ...op,
-            photos: await Promise.all(op.photos.map(resolvePhotoUri)),
-          }))
-        ),
-      }))
-    ),
-  };
 }
 
 function photosUsable(uris: string[]) {
-  return uris.some((u) => u.startsWith('http') || u.startsWith('data:') || u.startsWith('blob:'));
+  return uris.some((u) => Boolean(storagePathFromUri(u) || u.startsWith('data:') || u.startsWith('blob:')));
+}
+
+function canonicalizePhoto(uri: string) {
+  const path = storagePathFromUri(uri);
+  if (path && isRealStoragePath(path)) return cloudRef(path);
+  if (uri.startsWith('data:') || uri.startsWith('blob:')) return uri;
+  return '';
+}
+
+export function persistableSite(site: Site): Site {
+  return mapSitePhotos(site, (uri) => {
+    const path = storagePathFromUri(uri);
+    return path && isRealStoragePath(path) ? cloudRef(path) : '';
+  });
 }
 
 export function mergeSites(local: Site[], remote: Site[]) {
@@ -244,7 +271,7 @@ export function mergeSites(local: Site[], remote: Site[]) {
     const current = map.get(site.id);
     if (current && new Date(current.updatedAt).getTime() > new Date(site.updatedAt).getTime()) return;
     const loc = locals.get(site.id);
-    let next = site;
+    let next = mapSitePhotos(site, canonicalizePhoto);
     if (loc) {
       if (!photosUsable(next.generalPhotos) && photosUsable(loc.generalPhotos)) {
         next = { ...next, generalPhotos: loc.generalPhotos };
@@ -267,7 +294,7 @@ export function mergeSites(local: Site[], remote: Site[]) {
         }),
       };
     }
-    map.set(next.id, next);
+    map.set(next.id, mapSitePhotos(next, canonicalizePhoto));
   });
   return [...map.values()].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }

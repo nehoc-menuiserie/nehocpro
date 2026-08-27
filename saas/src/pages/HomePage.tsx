@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Button } from '../components/ui';
+import { SmartPhoto } from '../components/SmartPhoto';
 import { authorFullName } from '../constants';
 import { useSites } from '../context';
 import { exportBackup, importBackup } from '../storage';
@@ -144,7 +145,7 @@ export function HomePage() {
             <li key={item.id}>
               <Link to={`/site/${item.id}`} className="site-card">
                 {item.generalPhotos[0] ? (
-                  <img src={item.generalPhotos[0]} alt="" className="thumb" />
+                  <SmartPhoto src={item.generalPhotos[0]} className="thumb" />
                 ) : (
                   <div className="thumb fallback">{(item.clientName || 'N').slice(0, 1).toUpperCase()}</div>
                 )}

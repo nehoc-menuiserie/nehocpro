@@ -1,10 +1,14 @@
 import { useRef, useState } from 'react';
+import { SmartPhoto } from './SmartPhoto';
+import { ensureCloudPhoto } from '../lib/sync';
 import { compressImage } from '../storage';
 
 export function PhotoGrid({
+  siteId,
   uris,
   onChange,
 }: {
+  siteId: string;
   uris: string[];
   onChange: (next: string[]) => void;
 }) {
@@ -17,8 +21,14 @@ export function PhotoGrid({
     if (!files?.length) return;
     setBusy(true);
     try {
-      const added = await Promise.all([...files].map((file) => compressImage(file)));
-      onChange([...uris, ...added.filter(Boolean)]);
+      const local = await Promise.all([...files].map((file) => compressImage(file)));
+      const uploaded: string[] = [];
+      for (const uri of local.filter(Boolean)) {
+        uploaded.push(await ensureCloudPhoto(siteId, uri));
+      }
+      onChange([...uris, ...uploaded]);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Impossible d’enregistrer la photo dans le cloud.');
     } finally {
       setBusy(false);
     }
@@ -29,7 +39,7 @@ export function PhotoGrid({
       <div className="photo-actions">
         <button type="button" className="photo-action" onClick={() => cameraRef.current?.click()} disabled={busy}>
           <span>📷</span>
-          Photo
+          {busy ? 'Envoi…' : 'Photo'}
         </button>
         <button type="button" className="photo-action" onClick={() => libraryRef.current?.click()} disabled={busy}>
           <span>🖼</span>
@@ -61,9 +71,9 @@ export function PhotoGrid({
       {uris.length ? (
         <div className="photo-grid">
           {uris.map((uri, i) => (
-            <div key={`${uri.slice(0, 24)}-${i}`} className="photo-item">
+            <div key={`${uri.slice(0, 48)}-${i}`} className="photo-item">
               <button type="button" className="photo-thumb" onClick={() => setPreview(uri)}>
-                <img src={uri} alt="" />
+                <SmartPhoto src={uri} />
               </button>
               <button
                 type="button"
@@ -77,11 +87,11 @@ export function PhotoGrid({
           ))}
         </div>
       ) : (
-        <p className="muted">{busy ? 'Ajout des photos…' : 'Aucune photo pour le moment.'}</p>
+        <p className="muted">{busy ? 'Envoi des photos vers le cloud…' : 'Aucune photo pour le moment.'}</p>
       )}
       {preview ? (
         <button type="button" className="lightbox" onClick={() => setPreview(null)}>
-          <img src={preview} alt="Aperçu" />
+          <SmartPhoto src={preview} />
         </button>
       ) : null}
     </div>
