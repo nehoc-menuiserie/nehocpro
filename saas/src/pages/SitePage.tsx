@@ -312,10 +312,7 @@ export function SitePage() {
         <PhotoGrid siteId={site.id} uris={site.generalPhotos} onChange={(generalPhotos) => patch({ generalPhotos })} />
       </Card>
 
-      <div className="section-head">
-        <h2 className="block-title">{t('site.roomsTitle')}</h2>
-        <Button title={t('site.addRoom')} variant="secondary" onClick={addRoom} />
-      </div>
+      <h2 className="block-title">{t('site.roomsTitle')}</h2>
 
       {site.rooms.map((room, index) => (
         <Card key={room.id} className={activeRoomId === room.id ? 'room-card is-active' : 'room-card'}>
