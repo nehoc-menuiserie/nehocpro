@@ -7,6 +7,7 @@ import {
   Alert,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,6 +20,7 @@ import { Button, PressScale } from '../components/ui';
 import { authorFullName } from '../constants';
 import { useAuth } from '../auth';
 import { useSites } from '../context';
+import { FOLLOW_UP_COLORS, FOLLOW_UP_FILTERS, followUpTone, matchesFollowUpFilter } from '../followUp';
 import { exportBackup, importBackup } from '../storage';
 import { colors, radius } from '../theme';
 import type { HomeProps, Site } from '../types';
@@ -45,15 +47,17 @@ export function HomeScreen({ navigation }: HomeProps) {
   const { sites, ready, syncing, remove, replaceAll, syncNow } = useSites();
   const { signOut } = useAuth();
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('open');
   const [busy, setBusy] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return sites;
-    return sites.filter((s) =>
-      [s.clientName, s.address, s.author, s.siteType].join(' ').toLowerCase().includes(q)
-    );
-  }, [query, sites]);
+    return sites.filter((s) => {
+      if (!matchesFollowUpFilter(s.followUpStatus, filter)) return false;
+      if (!q) return true;
+      return [s.clientName, s.address, s.author, s.siteType, s.followUpStatus].join(' ').toLowerCase().includes(q);
+    });
+  }, [query, sites, filter]);
 
   const onExport = async () => {
     try {
@@ -115,6 +119,11 @@ export function HomeScreen({ navigation }: HomeProps) {
             <Text style={styles.statNum}>{sites.reduce((n, s) => n + countOpenings(s), 0)}</Text>
             <Text style={styles.statLabel}>Menuiseries</Text>
           </View>
+          <View style={styles.statDivider} />
+          <View style={styles.stat}>
+            <Text style={styles.statNum}>{sites.filter((s) => s.followUpStatus === 'Devis envoyé').length}</Text>
+            <Text style={styles.statLabel}>Devis envoyés</Text>
+          </View>
         </View>
       </LinearGradient>
 
@@ -151,6 +160,22 @@ export function HomeScreen({ navigation }: HomeProps) {
         />
       </View>
 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filters}
+      >
+        {FOLLOW_UP_FILTERS.map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={() => setFilter(item.id)}
+            style={[styles.filterChip, filter === item.id && styles.filterChipActive]}
+          >
+            <Text style={[styles.filterText, filter === item.id && styles.filterTextActive]}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
       <Button
         title="+ Nouveau chantier"
         onPress={() => navigation.navigate('Site', {})}
@@ -170,7 +195,9 @@ export function HomeScreen({ navigation }: HomeProps) {
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Aucun chantier</Text>
               <Text style={styles.emptyText}>
-                Créez un relevé, photographiez les menuiseries et générez le rapport PDF.
+                {sites.length
+                  ? 'Aucun dossier dans cet état. Changez le filtre ou créez un relevé.'
+                  : 'Créez un relevé, photographiez les menuiseries et générez le rapport PDF.'}
               </Text>
             </View>
           }
@@ -200,6 +227,24 @@ export function HomeScreen({ navigation }: HomeProps) {
                     <Text style={styles.cardCount}>
                       {item.rooms.length} pièce{item.rooms.length > 1 ? 's' : ''} · {countOpenings(item)} menuiserie
                       {countOpenings(item) > 1 ? 's' : ''}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.badge,
+                      {
+                        backgroundColor: FOLLOW_UP_COLORS[followUpTone(item.followUpStatus || 'Relevé')].bg,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        { color: FOLLOW_UP_COLORS[followUpTone(item.followUpStatus || 'Relevé')].text },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {item.followUpStatus || 'Relevé'}
                     </Text>
                   </View>
                   <PressScale onPress={() => confirmDelete(item)}>
@@ -267,6 +312,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
   },
+  filters: { paddingHorizontal: 20, paddingTop: 12, gap: 8, alignItems: 'center' },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  filterChipActive: { borderColor: colors.silver, backgroundColor: colors.surface2 },
+  filterText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  filterTextActive: { color: colors.text },
   cta: { marginHorizontal: 20, marginTop: 12 },
   list: { padding: 20, paddingTop: 16, paddingBottom: 8 },
   card: {
@@ -296,6 +353,13 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
   cardMeta: { color: colors.muted, fontSize: 12, marginTop: 2 },
   cardCount: { color: colors.silver, fontSize: 12, marginTop: 4, fontWeight: '600' },
+  badge: {
+    maxWidth: 92,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  badgeText: { fontSize: 10, fontWeight: '800', textAlign: 'center' },
   deleteBtn: {
     paddingHorizontal: 8,
     paddingVertical: 8,

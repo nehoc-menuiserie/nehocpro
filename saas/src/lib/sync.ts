@@ -1,4 +1,5 @@
 import type { Site } from '../types';
+import { FOLLOW_UP_DEFAULT, encodeFollowUpMark, followUpFromRecord, stripFollowUpMark } from '../followUp';
 import { mapSitePhotos, splitClientName, uid } from '../storage';
 import { PHOTO_PREFIX, cloudPhotoPath, isCloudPhoto, supabase } from './supabase';
 
@@ -71,6 +72,45 @@ export async function ensureCloudPhoto(siteId: string, uri: string) {
   return cloudRef(path);
 }
 
+let followUpColumnEnabled = true;
+
+function isMissingFollowUpColumn(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  const msg = `${error.code || ''} ${error.message || ''}`.toLowerCase();
+  return msg.includes('follow_up_status') || msg.includes('pgrst204');
+}
+
+async function upsertSiteRecord(site: Site, userId: string) {
+  if (!supabase) return;
+  const base = {
+    id: site.id,
+    owner_id: userId,
+    author: site.author,
+    client_name: site.clientName,
+    client_phone: site.clientPhone,
+    client_email: site.clientEmail,
+    address: site.address,
+    site_type: site.siteType,
+    work_type: site.workType,
+    updated_at: site.updatedAt,
+  };
+  if (followUpColumnEnabled) {
+    const { error } = await supabase.from('sites').upsert({
+      ...base,
+      general_notes: site.generalNotes,
+      follow_up_status: site.followUpStatus,
+    });
+    if (!error) return;
+    if (!isMissingFollowUpColumn(error)) throw error;
+    followUpColumnEnabled = false;
+  }
+  const { error } = await supabase.from('sites').upsert({
+    ...base,
+    general_notes: encodeFollowUpMark(site.generalNotes, site.followUpStatus),
+  });
+  if (error) throw error;
+}
+
 export async function pushSite(site: Site) {
   if (!supabase) return site;
   const {
@@ -91,20 +131,7 @@ export async function pushSite(site: Site) {
     }))
   );
 
-  const { error: siteError } = await supabase.from('sites').upsert({
-    id: site.id,
-    owner_id: user.id,
-    author: site.author,
-    client_name: site.clientName,
-    client_phone: site.clientPhone,
-    client_email: site.clientEmail,
-    address: site.address,
-    site_type: site.siteType,
-    work_type: site.workType,
-    general_notes: site.generalNotes,
-    updated_at: site.updatedAt,
-  });
-  if (siteError) throw siteError;
+  await upsertSiteRecord(site, user.id);
 
   await supabase.from('rooms').delete().eq('site_id', site.id);
   await supabase.from('photos').delete().eq('site_id', site.id);
@@ -236,7 +263,11 @@ export async function pullSites(): Promise<Site[]> {
       address: String(row.address || ''),
       siteType: String(row.site_type || 'Maison'),
       workType: String(row.work_type || 'Rénovation'),
-      generalNotes: String(row.general_notes || ''),
+      followUpStatus: followUpFromRecord(
+        (row as Record<string, unknown>).follow_up_status,
+        String(row.general_notes || '')
+      ),
+      generalNotes: stripFollowUpMark(String(row.general_notes || '')),
       updatedAt: String(row.updated_at || new Date().toISOString()),
       generalPhotos: (photoRows || [])
         .filter((p) => p.site_id === row.id && p.kind === 'general')
@@ -260,7 +291,7 @@ function canonicalizePhoto(uri: string) {
 }
 
 export function persistableSite(site: Site): Site {
-  return mapSitePhotos(site, (uri) => {
+  return mapSitePhotos({ ...site, followUpStatus: site.followUpStatus || FOLLOW_UP_DEFAULT }, (uri) => {
     const path = storagePathFromUri(uri);
     return path && isRealStoragePath(path) ? cloudRef(path) : '';
   });

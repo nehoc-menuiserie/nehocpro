@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PhotoGrid } from '../components/PhotoGrid';
+import { FollowUpPicker } from '../components/FollowUpPicker';
 import { Button, Card, ColorSwatch, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
 import { useCatalog } from '../catalog';
 import { useSites } from '../context';
@@ -169,6 +170,12 @@ export function SitePage() {
         </Card>
 
         <Card>
+          <SectionTitle>Suivi du chantier</SectionTitle>
+          <p className="follow-hint">Où en est le dossier, du relevé jusqu’au paiement.</p>
+          <FollowUpPicker value={site.followUpStatus || 'Relevé'} onChange={(followUpStatus) => patch({ followUpStatus })} />
+        </Card>
+
+        <Card className="site-grid-span">
           <SectionTitle>Client et chantier</SectionTitle>
           <div className="form-grid">
             <Field label="Prénom *">

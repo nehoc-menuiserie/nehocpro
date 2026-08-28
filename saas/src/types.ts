@@ -29,6 +29,7 @@ export type Site = {
   address: string;
   siteType: string;
   workType: string;
+  followUpStatus: string;
   generalNotes: string;
   generalPhotos: string[];
   rooms: Room[];

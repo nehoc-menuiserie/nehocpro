@@ -10,6 +10,7 @@ create table if not exists public.sites (
   address text not null default '',
   site_type text not null default 'Maison',
   work_type text not null default 'Rénovation',
+  follow_up_status text not null default 'Relevé',
   general_notes text not null default '',
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
@@ -86,3 +87,5 @@ using (bucket_id = 'site-photos');
 drop policy if exists "team_photo_delete" on storage.objects;
 create policy "team_photo_delete" on storage.objects for delete to authenticated
 using (bucket_id = 'site-photos');
+
+alter table public.sites add column if not exists follow_up_status text not null default 'Relevé';

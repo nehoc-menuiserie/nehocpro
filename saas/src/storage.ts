@@ -1,3 +1,4 @@
+import { FOLLOW_UP_DEFAULT, followUpFromRecord, stripFollowUpMark } from './followUp';
 import type { Opening, Room, Site } from './types';
 
 const KEY = 'nehocpro_sites_v02';
@@ -37,6 +38,7 @@ export function createEmptySite(): Site {
     address: '',
     siteType: 'Maison',
     workType: 'Rénovation',
+    followUpStatus: FOLLOW_UP_DEFAULT,
     generalNotes: '',
     generalPhotos: [],
     rooms: [createEmptyRoom()],
@@ -73,7 +75,8 @@ export function normalizeSite(raw: Partial<Site> & Record<string, unknown>): Sit
     address: asString(raw.address),
     siteType: asString(raw.siteType) || 'Maison',
     workType: asString(raw.workType) || 'Rénovation',
-    generalNotes: asString(raw.generalNotes),
+    followUpStatus: followUpFromRecord(raw.followUpStatus, asString(raw.generalNotes)),
+    generalNotes: stripFollowUpMark(asString(raw.generalNotes)),
     generalPhotos: Array.isArray(raw.generalPhotos) ? raw.generalPhotos.map(asString) : [],
     rooms: rooms.map((r) => {
       const room = r as Partial<Room>;

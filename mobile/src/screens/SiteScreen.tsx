@@ -4,6 +4,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,6 +17,7 @@ import { PhotoGrid } from '../components/PhotoGrid';
 import { Button, Card, ColorSwatch, Field, Input, SectionTitle, Select } from '../components/ui';
 import { useSites } from '../context';
 import { composeClientName, createEmptyOpening, createEmptyRoom, createEmptySite, normalizeSite } from '../storage';
+import { FOLLOW_UP_COLORS, FOLLOW_UP_STATUSES, followUpTone } from '../followUp';
 import { colors, radius } from '../theme';
 import type { Opening, Room, Site, SiteProps } from '../types';
 
@@ -136,6 +138,29 @@ export function SiteScreen({ navigation, route }: SiteProps) {
               placeholder="Sélectionner"
               onChange={(author) => patch({ author })}
             />
+          </Card>
+
+          <Card>
+            <SectionTitle>Suivi du chantier</SectionTitle>
+            <Text style={styles.followHint}>Où en est le dossier, du relevé jusqu’au paiement.</Text>
+            <View style={styles.followChips}>
+              {FOLLOW_UP_STATUSES.map((status) => {
+                const active = (site.followUpStatus || 'Relevé') === status;
+                const tone = FOLLOW_UP_COLORS[followUpTone(status)];
+                return (
+                  <Pressable
+                    key={status}
+                    onPress={() => patch({ followUpStatus: status })}
+                    style={[
+                      styles.followChip,
+                      active && { backgroundColor: tone.bg, borderColor: tone.text },
+                    ]}
+                  >
+                    <Text style={[styles.followChipText, active && { color: tone.text }]}>{status}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </Card>
 
           <Card>
@@ -402,6 +427,17 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
   colorRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  followHint: { color: colors.muted, fontSize: 13, marginBottom: 12 },
+  followChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  followChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  followChipText: { color: colors.muted, fontSize: 13, fontWeight: '700' },
   sticky: {
     position: 'absolute',
     left: 0,
