@@ -196,7 +196,7 @@ img {
 }
 
 .site-page {
-  padding-bottom: calc(var(--sticky) + 24px);
+  padding-bottom: calc(196px + env(safe-area-inset-bottom));
   overflow-x: hidden;
 }
 
@@ -1407,7 +1407,7 @@ input[type='time']::-webkit-datetime-edit {
   }
 
   .site-page {
-    padding-bottom: calc(var(--sticky) + 16px);
+    padding-bottom: calc(196px + env(safe-area-inset-bottom));
   }
 
   .site-page.is-plan {

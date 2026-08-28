@@ -9,6 +9,7 @@ import { useSites } from '../context';
 import { SIGNED_STATUS, canAccessPosePlan, type FollowUpStatus, type PosePlan } from '../followUp';
 import { composeClientName, createEmptyOpening, createEmptyRoom, createEmptySite, normalizeSite } from '../storage';
 import { LanguageSwitcher, useI18n } from '../i18n';
+import { downloadProdevisCsv } from '../prodevisCsv';
 import type { Opening, Room, Site } from '../types';
 
 export function SitePage() {
@@ -444,6 +445,7 @@ export function SitePage() {
               <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
               <Button title={t('site.reportPdf')} variant="secondary" onClick={onReport} />
             </div>
+            <Button title={t('site.csvProdevis')} variant="outline" onClick={() => downloadProdevisCsv(site)} />
           </>
         )}
       </div>

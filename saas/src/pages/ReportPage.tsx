@@ -4,6 +4,7 @@ import { Button } from '../components/ui';
 import { authorFullName } from '../constants';
 import { useSites } from '../context';
 import { LanguageSwitcher, useI18n } from '../i18n';
+import { downloadProdevisCsv } from '../prodevisCsv';
 import { buildReportHtml } from '../reportHtml';
 import { buildReportPdfFromPreview, sharePdfFile } from '../shareWhatsApp';
 
@@ -218,6 +219,7 @@ export function ReportPage() {
           )}
         </div>
         <Button title={t('report.print')} onClick={printPreview} disabled={busy || !html} />
+        <Button title={t('report.csvProdevis')} variant="secondary" onClick={() => downloadProdevisCsv(site)} />
         <button
           type="button"
           className="btn btn-whatsapp"
@@ -228,7 +230,7 @@ export function ReportPage() {
           {sharing ? t('report.preparing') : t('report.whatsapp')}
         </button>
         <p className="hint">
-          {pdfHint || t('report.hint')}
+          {pdfHint || `${t('report.hint')} ${t('report.csvHint')}`}
         </p>
       </div>
 
