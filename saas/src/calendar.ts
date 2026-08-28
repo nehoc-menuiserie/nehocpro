@@ -62,7 +62,7 @@ function eventBlock({
     fold(`DESCRIPTION:${icsEscape(description)}`),
     fold(`LOCATION:${icsEscape(location)}`),
     'BEGIN:VALARM',
-    allDay ? 'TRIGGER:-PT15H' : 'TRIGGER:-PT15M',
+    allDay ? 'TRIGGER:PT8H' : 'TRIGGER:PT0S',
     'ACTION:DISPLAY',
     fold(`DESCRIPTION:${icsEscape(summary)}`),
     'END:VALARM',
@@ -134,36 +134,42 @@ export function buildPlanIcs(site: Site) {
   ].join('\r\n');
 }
 
-function icsFile(site: Site) {
-  const blob = new Blob([buildPlanIcs(site)], { type: 'text/calendar;charset=utf-8' });
-  const safe = (site.clientName || 'chantier').replace(/[^\w\-]+/g, '_');
-  return new File([blob], `NEHOC-pose-${safe}.ics`, { type: 'text/calendar' });
+export function encodeIcsParam(ics: string) {
+  const bytes = new TextEncoder().encode(ics);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export async function addPlanToPhone(site: Site): Promise<'shared' | 'downloaded'> {
-  const file = icsFile(site);
-  const canShare =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.share === 'function' &&
-    typeof navigator.canShare === 'function' &&
-    navigator.canShare({ files: [file] });
-  if (canShare) {
-    try {
-      await navigator.share({
-        files: [file],
-        title: `Pose NEHOC — ${site.clientName || 'chantier'}`,
-        text: 'Ajoutez la pose et les rappels dans le calendrier du téléphone.',
-      });
-      return 'shared';
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') return 'shared';
-    }
+function isMobileDevice() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /Android|iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function openCalendarUrl(url: string) {
+  const opened = window.open(url, '_blank', 'noopener,noreferrer');
+  if (opened) return;
+  window.location.assign(url);
+}
+
+export function addPlanToPhone(site: Site): 'calendar' | 'downloaded' {
+  const ics = buildPlanIcs(site);
+  if (isMobileDevice()) {
+    openCalendarUrl(`/api/ics?d=${encodeIcsParam(ics)}`);
+    return 'calendar';
   }
-  const url = URL.createObjectURL(file);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const safe = (site.clientName || 'chantier').replace(/[^\w\-]+/g, '_');
   const a = document.createElement('a');
   a.href = url;
-  a.download = file.name;
+  a.download = `NEHOC-pose-${safe}.ics`;
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
   return 'downloaded';
 }

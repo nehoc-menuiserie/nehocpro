@@ -46,10 +46,10 @@ export function HomePage() {
   const [openId, setOpenId] = useState('');
   const [planSite, setPlanSite] = useState<Site | null>(null);
 
-  const sharePlan = async (next: Site) => {
+  const openPlan = (next: Site) => {
     try {
-      const how = await addPlanToPhone(next);
-      alert(how === 'shared' ? t('plan.savedPhone') : t('plan.downloaded'));
+      const how = addPlanToPhone(next);
+      if (how === 'downloaded') alert(t('plan.downloaded'));
     } catch {
       alert(t('plan.calendarError'));
     }
@@ -114,9 +114,9 @@ export function HomePage() {
       reminder2: plan.reminder2,
     };
     setPlanSite(null);
+    openPlan(next);
     try {
       await upsert(next);
-      await sharePlan(next);
     } catch {
       alert(t('home.followError'));
     }

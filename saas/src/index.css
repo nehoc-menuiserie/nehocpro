@@ -434,32 +434,26 @@ h1 {
   color: #c9c4b8;
 }
 
-.site-tabs,
-.plan-tabs {
+.site-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin: 0 0 16px;
 }
 
-.plan-tabs {
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
-.site-tabs button,
-.plan-tabs button {
+.site-tabs button {
+  min-width: 0;
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--muted);
   border-radius: 999px;
-  padding: 10px 12px;
+  padding: 10px 8px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.site-tabs button.is-active,
-.plan-tabs button.is-active {
+.site-tabs button.is-active {
   color: var(--text);
   border-color: var(--silver);
   background: var(--surface);
@@ -469,6 +463,9 @@ h1 {
   position: fixed;
   inset: 0;
   z-index: 80;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.62);
   display: grid;
   place-items: end center;
@@ -476,14 +473,28 @@ h1 {
 }
 
 .modal-card {
-  width: min(520px, 100%);
+  width: 100%;
+  max-width: 520px;
+  min-width: 0;
   max-height: min(88vh, 720px);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-x: none;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 20px 18px 16px;
+  padding: 20px 14px 16px;
   box-shadow: var(--shadow);
+}
+
+.modal-card .kicker,
+.modal-card h2,
+.modal-card .subtitle,
+.modal-card .hint,
+.modal-card .field,
+.modal-card .label {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .modal-card h2 {
@@ -496,8 +507,26 @@ h1 {
   margin-bottom: 16px;
 }
 
+.modal-card .input {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-card input[type='date'],
+.modal-card input[type='datetime-local'] {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
 .modal-card .sticky-row {
   margin-top: 16px;
+  min-width: 0;
+}
+
+.modal-card .sticky-row .btn {
+  min-width: 0;
 }
 
 .plan-cal-btn {

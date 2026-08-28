@@ -62,10 +62,10 @@ export function SitePage() {
 
   const patch = (partial: Partial<Site>) => setSite((s) => (s ? { ...s, ...partial } : s));
 
-  const sharePlan = async (next: Site) => {
+  const openPlan = (next: Site) => {
     try {
-      const how = await addPlanToPhone(next);
-      alert(how === 'shared' ? t('plan.savedPhone') : t('plan.downloaded'));
+      const how = addPlanToPhone(next);
+      if (how === 'downloaded') alert(t('plan.downloaded'));
     } catch {
       alert(t('plan.calendarError'));
     }
@@ -90,9 +90,9 @@ export function SitePage() {
     setSite(next);
     setPlanOpen(false);
     setView('plan');
+    openPlan(next);
     try {
       await upsert(next);
-      await sharePlan(next);
     } catch (err) {
       alert(err instanceof Error ? err.message : t('site.saveError'));
     }
@@ -256,7 +256,7 @@ export function SitePage() {
                 alert(t('plan.needAll'));
                 return;
               }
-              void sharePlan(site);
+              void openPlan(site);
             }}
           />
         </Card>
@@ -471,7 +471,7 @@ export function SitePage() {
                   alert(t('plan.needAll'));
                   return;
                 }
-                void sharePlan(site);
+                void openPlan(site);
               }}
             />
           </div>
