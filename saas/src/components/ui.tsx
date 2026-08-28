@@ -1,5 +1,6 @@
 import { useCatalog } from '../catalog';
 import { isUndefinedColor, ralHex, WOOD_GRADIENTS } from '../constants';
+import { useI18n } from '../i18n';
 import type {
   ButtonHTMLAttributes,
   CSSProperties,
@@ -52,19 +53,21 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
 export function Select({
   label,
   options,
-  placeholder = 'Sélectionner',
+  placeholder,
   ...rest
 }: SelectHTMLAttributes<HTMLSelectElement> & {
   label?: string;
   options: { value: string; label: string }[] | string[];
   placeholder?: string;
 }) {
-  const items = options.map((o) => (typeof o === 'string' ? { value: o, label: o || placeholder } : o));
+  const { t } = useI18n();
+  const ph = placeholder ?? t('common.select');
+  const items = options.map((o) => (typeof o === 'string' ? { value: o, label: o || ph } : o));
   const select = (
     <select className="input select" {...rest}>
       {items.map((item) => (
         <option key={item.value || 'empty'} value={item.value}>
-          {item.label || placeholder}
+            {item.label || ph}
         </option>
       ))}
     </select>

@@ -1,0 +1,542 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+
+export type Locale = 'fr' | 'pt';
+
+const KEY = 'nehocpro_lang';
+
+const fr = {
+  'lang.fr': 'FR',
+  'lang.pt': 'PT',
+  'lang.label': 'Langue',
+  'common.select': 'Sélectionner',
+  'common.sync': 'Synchroniser',
+  'common.syncing': 'Sync…',
+  'common.logout': 'Déconnexion',
+  'common.home': 'Accueil',
+  'common.backHome': '← Accueil',
+  'common.backSite': '← Chantier',
+  'common.back': '← Retour',
+  'common.new': 'Nouveau',
+  'common.backoffice': 'Back office',
+  'common.save': 'Enregistrer',
+  'common.saving': 'Enregistrement…',
+  'common.delete': 'Supprimer',
+  'common.add': 'Ajouter',
+  'common.toDefine': 'À définir',
+  'brand.kicker': 'Menuiserie aluminium',
+  'brand.subtitle': 'Relevés de chantier',
+  'login.kicker': 'Cloud NEHOC',
+  'login.title': 'Connexion',
+  'login.subtitle': 'Connectez-vous avec votre compte équipe pour accéder à NEHOCPRO.',
+  'login.email': 'E-mail',
+  'login.password': 'Mot de passe',
+  'login.passwordPh': 'mot de passe',
+  'login.submit': 'Se connecter',
+  'login.submitting': 'Connexion…',
+  'login.needCredentials': 'Indiquez un e-mail et un mot de passe d’au moins 6 caractères.',
+  'login.noKeys': 'Les clés Supabase ne sont pas encore configurées.',
+  'login.failed': 'Connexion impossible.',
+  'home.sites': 'Chantiers',
+  'home.openings': 'Menuiseries',
+  'home.quotesSent': 'Devis envoyés',
+  'home.search': 'Rechercher un client, une adresse…',
+  'home.filterAria': 'Filtrer le suivi',
+  'home.newSite': '+ Nouveau chantier',
+  'home.emptyTitle': 'Aucun chantier',
+  'home.emptyFilter': 'Aucun dossier dans cet état. Changez le filtre ou créez un relevé.',
+  'home.emptyAll': 'Créez un relevé, photographiez les menuiseries et générez le rapport PDF.',
+  'home.noName': 'Sans nom',
+  'home.noAddress': 'Adresse non renseignée',
+  'home.noAuthor': 'Responsable ?',
+  'home.followOf': 'Suivi de {name}',
+  'home.thisSite': 'ce chantier',
+  'home.followError': 'Impossible de mettre à jour le suivi. Vérifiez le réseau.',
+  'home.syncError': 'Synchronisation impossible. Vérifiez le réseau.',
+  'home.roomsOpenings': '{rooms} {roomWord} · {openings} {openingWord}',
+  'word.room': 'pièce',
+  'word.rooms': 'pièces',
+  'word.opening': 'menuiserie',
+  'word.openings': 'menuiseries',
+  'filter.all': 'Tous',
+  'filter.open': 'En cours',
+  'filter.todo': 'Devis à faire',
+  'filter.sent': 'Devis envoyé',
+  'filter.signed': 'Signé',
+  'filter.invoiced': 'Facturé',
+  'filter.paid': 'Payé',
+  'filter.lost': 'Perdu',
+  'follow.Relevé': 'Relevé',
+  'follow.Devis à faire': 'Devis à faire',
+  'follow.Devis créé': 'Devis créé',
+  'follow.Devis envoyé': 'Devis envoyé',
+  'follow.Devis signé': 'Devis signé',
+  'follow.Facturé': 'Facturé',
+  'follow.Payé': 'Payé',
+  'follow.Perdu': 'Perdu',
+  'site.missing': 'Chantier introuvable.',
+  'site.newTitle': 'Nouveau chantier',
+  'site.title': 'Chantier',
+  'site.authorTitle': 'Responsable du relevé',
+  'site.authorLabel': 'Relevé effectué par *',
+  'site.followTitle': 'Suivi du chantier',
+  'site.followHint': 'Où en est le dossier, du relevé jusqu’au paiement.',
+  'site.clientTitle': 'Client et chantier',
+  'site.firstName': 'Prénom *',
+  'site.lastName': 'Nom *',
+  'site.address': 'Adresse du chantier',
+  'site.phone': 'Téléphone',
+  'site.email': 'E-mail',
+  'site.siteType': 'Type de chantier',
+  'site.workType': 'Nature des travaux',
+  'site.notes': 'Notes générales',
+  'site.photos': 'Photos générales',
+  'site.roomsTitle': 'Pièces et menuiseries',
+  'site.addRoom': '+ Pièce',
+  'site.addOpening': '+ Menuiserie',
+  'site.roomN': 'Pièce {n}',
+  'site.roomName': 'Nom de la pièce',
+  'site.roomNamePh': 'Ex. Séjour, Chambre 1…',
+  'site.roomNotes': 'Notes sur la pièce',
+  'site.openingN': 'Menuiserie {n}',
+  'site.type': 'Type',
+  'site.ref': 'Repère',
+  'site.refPh': 'Ex. F01',
+  'site.width': 'Largeur (mm)',
+  'site.height': 'Hauteur (mm)',
+  'site.pose': 'Type de pose',
+  'site.qty': 'Quantité',
+  'site.color': 'Couleur extérieure (RAL)',
+  'site.openingNotes': 'Notes',
+  'site.addOpeningLong': '+ Ajouter une menuiserie',
+  'site.reportPdf': 'Rapport PDF',
+  'site.needAuthor': 'Sélectionnez la personne qui effectue le relevé.',
+  'site.needName': 'Indiquez le prénom et le nom du client.',
+  'site.saved': 'Le chantier et les photos ont été enregistrés dans le cloud.',
+  'site.saveError': 'Enregistrement impossible. Vérifiez le réseau et réessayez.',
+  'photo.camera': 'Photo',
+  'photo.gallery': 'Galerie',
+  'photo.sending': 'Envoi…',
+  'photo.uploading': 'Envoi des photos vers le cloud…',
+  'photo.empty': 'Aucune photo pour le moment.',
+  'photo.remove': 'Supprimer la photo',
+  'photo.error': 'Impossible d’enregistrer la photo dans le cloud.',
+  'swipe.delete': 'Supprimer le chantier',
+  'report.title': 'Aperçu du rapport',
+  'report.kicker': 'Visite de chantier',
+  'report.call': 'Appeler',
+  'report.noPhone': 'Pas de téléphone',
+  'report.mail': 'E-mail',
+  'report.noMail': 'Pas d’e-mail',
+  'report.print': 'Imprimer / enregistrer en PDF',
+  'report.whatsapp': 'Envoyer le PDF sur WhatsApp',
+  'report.preparing': 'Préparation du PDF…',
+  'report.hint': 'Choisissez WhatsApp, puis le contact. C’est le PDF du rapport qui part, pas un texte.',
+  'report.previewAria': 'Aperçu du rapport PDF',
+  'report.notReady': 'L’aperçu n’est pas encore prêt.',
+  'report.generateError': 'Impossible de générer le rapport.',
+  'report.shareError': 'Impossible de partager le PDF.',
+  'report.pdfSaved':
+    'Le PDF a été enregistré. Appuyez encore sur le bouton pour choisir WhatsApp, ou joignez le fichier dans une conversation.',
+  'bo.title': 'Back office',
+  'bo.subtitle': 'Ajoutez ou retirez les listes utilisées dans les relevés. Les 4 utilisateurs voient les mêmes choix.',
+  'bo.new': 'Nouveau',
+  'bo.newPh': 'Nom à ajouter',
+  'bo.hex': 'Couleur écran (#hex)',
+  'bo.needName': 'Indiquez un nom.',
+  'bo.delete': 'Suppr.',
+  'bo.authors': 'Responsables du relevé',
+  'bo.authorsHint': 'Nathaniel, Michael…',
+  'bo.siteTypes': 'Types de chantier',
+  'bo.siteTypesHint': 'Maison, appartement…',
+  'bo.workTypes': 'Nature des travaux',
+  'bo.workTypesHint': 'Rénovation, neuf…',
+  'bo.openings': 'Types de menuiserie',
+  'bo.openingsHint': 'Fenêtre, coulissant…',
+  'bo.poses': 'Types de pose',
+  'bo.posesHint': 'Applique, tunnel…',
+  'bo.colors': 'Couleurs RAL',
+  'bo.colorsHint': 'Nom + code hexadécimal',
+  'pdf.projectLead': 'Chef de projet',
+  'pdf.brandLine': 'Menuiseries aluminium & PVC',
+  'pdf.report': 'RAPPORT',
+  'pdf.visitTitle': 'VISITE DE CHANTIER',
+  'pdf.visitSub': "Relevé technique préalable à l'établissement du devis",
+  'pdf.client': 'Client',
+  'pdf.address': 'Adresse du chantier',
+  'pdf.siteType': 'Type de bien',
+  'pdf.works': 'Travaux',
+  'pdf.summary': 'Synthèse',
+  'pdf.author': 'Responsable',
+  'pdf.contact': 'Contact client',
+  'pdf.roomsCounted': 'Pièces relevées',
+  'pdf.openingsCounted': 'Menuiseries relevées',
+  'pdf.generalNotes': 'Observations générales',
+  'pdf.clientSign': 'Validation client',
+  'pdf.signDate': 'Date et signature',
+  'pdf.nehocLead': 'Chef de projet NEHOC',
+  'pdf.footerConfidential': 'NEHOC — Rapport de visite confidentiel',
+  'pdf.footerVisit': 'NEHOC — Rapport de visite',
+  'pdf.noPhoto': 'Aucune photo',
+  'pdf.survey': 'RELEVÉ',
+  'pdf.openingN': 'Menuiserie {n}/{total}',
+  'pdf.dims': 'Dimensions',
+  'pdf.qty': 'Quantité',
+  'pdf.pose': 'Type de pose',
+  'pdf.color': 'Couleur',
+  'pdf.room': 'Pièce',
+  'pdf.obs': 'Observations :',
+  'pdf.noOpening': 'Aucune menuiserie renseignée.',
+  'pdf.roomFallback': 'Pièce {n}',
+  'pdf.roomMeta': '{n} menuiserie',
+  'pdf.roomMetaMany': '{n} menuiseries',
+  'pdf.docTitle': 'Rapport NEHOC — {name}',
+  'plan.title': 'Pose et rappels',
+  'plan.subtitle': 'Indiquez la date de pose, puis deux rappels avec date et heure. Ils seront proposés dans le calendrier du téléphone.',
+  'plan.tabPose': 'Pose',
+  'plan.tabR1': 'Rappel 1',
+  'plan.tabR2': 'Rappel 2',
+  'plan.poseDate': 'Date de la pose',
+  'plan.reminder1': 'Premier rappel (date et heure)',
+  'plan.reminder2': 'Deuxième rappel (date et heure)',
+  'plan.needAll': 'Renseignez la date de pose et les deux rappels.',
+  'plan.confirm': 'Confirmer',
+  'plan.cancel': 'Annuler',
+  'plan.hint': 'Après confirmation, le téléphone proposera d’ajouter ces dates à l’agenda (iPhone, Android ou calendrier).',
+  'plan.addCalendar': 'Ajouter au calendrier du téléphone',
+  'plan.savedPhone': 'Choisissez Calendrier pour enregistrer la pose et les rappels sur le téléphone.',
+  'plan.downloaded': 'Fichier calendrier téléchargé. Ouvrez-le pour l’ajouter à votre agenda.',
+  'plan.calendarError': 'Impossible d’ouvrir le calendrier. Vérifiez les dates puis réessayez.',
+  'site.tabSurvey': 'Relevé',
+  'site.tabPlan': 'Pose & rappels',
+} as const;
+
+type MsgKey = keyof typeof fr;
+
+const pt: Record<MsgKey, string> = {
+  'lang.fr': 'FR',
+  'lang.pt': 'PT',
+  'lang.label': 'Idioma',
+  'common.select': 'Selecionar',
+  'common.sync': 'Sincronizar',
+  'common.syncing': 'Sync…',
+  'common.logout': 'Terminar sessão',
+  'common.home': 'Início',
+  'common.backHome': '← Início',
+  'common.backSite': '← Obra',
+  'common.back': '← Voltar',
+  'common.new': 'Novo',
+  'common.backoffice': 'Back office',
+  'common.save': 'Guardar',
+  'common.saving': 'A guardar…',
+  'common.delete': 'Eliminar',
+  'common.add': 'Adicionar',
+  'common.toDefine': 'A definir',
+  'brand.kicker': 'Caixilharia de alumínio',
+  'brand.subtitle': 'Levantamentos de obra',
+  'login.kicker': 'Cloud NEHOC',
+  'login.title': 'Iniciar sessão',
+  'login.subtitle': 'Inicie sessão com a sua conta de equipa para aceder ao NEHOCPRO.',
+  'login.email': 'E-mail',
+  'login.password': 'Palavra-passe',
+  'login.passwordPh': 'palavra-passe',
+  'login.submit': 'Entrar',
+  'login.submitting': 'A entrar…',
+  'login.needCredentials': 'Indique um e-mail e uma palavra-passe com pelo menos 6 caracteres.',
+  'login.noKeys': 'As chaves Supabase ainda não estão configuradas.',
+  'login.failed': 'Não foi possível iniciar sessão.',
+  'home.sites': 'Obras',
+  'home.openings': 'Vãos',
+  'home.quotesSent': 'Orçamentos enviados',
+  'home.search': 'Pesquisar um cliente, uma morada…',
+  'home.filterAria': 'Filtrar o acompanhamento',
+  'home.newSite': '+ Nova obra',
+  'home.emptyTitle': 'Nenhuma obra',
+  'home.emptyFilter': 'Nenhum dossier neste estado. Mude o filtro ou crie um levantamento.',
+  'home.emptyAll': 'Crie um levantamento, fotografe os vãos e gere o relatório PDF.',
+  'home.noName': 'Sem nome',
+  'home.noAddress': 'Morada não indicada',
+  'home.noAuthor': 'Responsável ?',
+  'home.followOf': 'Acompanhamento de {name}',
+  'home.thisSite': 'esta obra',
+  'home.followError': 'Não foi possível atualizar o acompanhamento. Verifique a rede.',
+  'home.syncError': 'Sincronização impossível. Verifique a rede.',
+  'home.roomsOpenings': '{rooms} {roomWord} · {openings} {openingWord}',
+  'word.room': 'divisão',
+  'word.rooms': 'divisões',
+  'word.opening': 'vão',
+  'word.openings': 'vãos',
+  'filter.all': 'Todos',
+  'filter.open': 'Em curso',
+  'filter.todo': 'Orçamento a fazer',
+  'filter.sent': 'Orçamento enviado',
+  'filter.signed': 'Assinado',
+  'filter.invoiced': 'Faturado',
+  'filter.paid': 'Pago',
+  'filter.lost': 'Perdido',
+  'follow.Relevé': 'Levantamento',
+  'follow.Devis à faire': 'Orçamento a fazer',
+  'follow.Devis créé': 'Orçamento criado',
+  'follow.Devis envoyé': 'Orçamento enviado',
+  'follow.Devis signé': 'Orçamento assinado',
+  'follow.Facturé': 'Faturado',
+  'follow.Payé': 'Pago',
+  'follow.Perdu': 'Perdido',
+  'site.missing': 'Obra não encontrada.',
+  'site.newTitle': 'Nova obra',
+  'site.title': 'Obra',
+  'site.authorTitle': 'Responsável do levantamento',
+  'site.authorLabel': 'Levantamento feito por *',
+  'site.followTitle': 'Acompanhamento da obra',
+  'site.followHint': 'Estado do dossier, do levantamento até ao pagamento.',
+  'site.clientTitle': 'Cliente e obra',
+  'site.firstName': 'Nome *',
+  'site.lastName': 'Apelido *',
+  'site.address': 'Morada da obra',
+  'site.phone': 'Telefone',
+  'site.email': 'E-mail',
+  'site.siteType': 'Tipo de obra',
+  'site.workType': 'Natureza dos trabalhos',
+  'site.notes': 'Notas gerais',
+  'site.photos': 'Fotografias gerais',
+  'site.roomsTitle': 'Divisões e vãos',
+  'site.addRoom': '+ Divisão',
+  'site.addOpening': '+ Vão',
+  'site.roomN': 'Divisão {n}',
+  'site.roomName': 'Nome da divisão',
+  'site.roomNamePh': 'Ex. Sala, Quarto 1…',
+  'site.roomNotes': 'Notas da divisão',
+  'site.openingN': 'Vão {n}',
+  'site.type': 'Tipo',
+  'site.ref': 'Referência',
+  'site.refPh': 'Ex. J01',
+  'site.width': 'Largura (mm)',
+  'site.height': 'Altura (mm)',
+  'site.pose': 'Tipo de aplicação',
+  'site.qty': 'Quantidade',
+  'site.color': 'Cor exterior (RAL)',
+  'site.openingNotes': 'Notas',
+  'site.addOpeningLong': '+ Adicionar um vão',
+  'site.reportPdf': 'Relatório PDF',
+  'site.needAuthor': 'Selecione a pessoa que faz o levantamento.',
+  'site.needName': 'Indique o nome e o apelido do cliente.',
+  'site.saved': 'A obra e as fotografias foram guardadas na cloud.',
+  'site.saveError': 'Não foi possível guardar. Verifique a rede e tente novamente.',
+  'photo.camera': 'Foto',
+  'photo.gallery': 'Galeria',
+  'photo.sending': 'A enviar…',
+  'photo.uploading': 'A enviar as fotos para a cloud…',
+  'photo.empty': 'Ainda não há fotografias.',
+  'photo.remove': 'Eliminar a fotografia',
+  'photo.error': 'Não foi possível guardar a fotografia na cloud.',
+  'swipe.delete': 'Eliminar a obra',
+  'report.title': 'Pré-visualização do relatório',
+  'report.kicker': 'Visita de obra',
+  'report.call': 'Ligar',
+  'report.noPhone': 'Sem telefone',
+  'report.mail': 'E-mail',
+  'report.noMail': 'Sem e-mail',
+  'report.print': 'Imprimir / guardar em PDF',
+  'report.whatsapp': 'Enviar o PDF no WhatsApp',
+  'report.preparing': 'A preparar o PDF…',
+  'report.hint': 'Escolha o WhatsApp e depois o contacto. É o PDF do relatório que é enviado, não um texto.',
+  'report.previewAria': 'Pré-visualização do relatório PDF',
+  'report.notReady': 'A pré-visualização ainda não está pronta.',
+  'report.generateError': 'Não foi possível gerar o relatório.',
+  'report.shareError': 'Não foi possível partilhar o PDF.',
+  'report.pdfSaved':
+    'O PDF foi guardado. Toque outra vez no botão para escolher o WhatsApp, ou anexe o ficheiro numa conversa.',
+  'bo.title': 'Back office',
+  'bo.subtitle': 'Adicione ou remova as listas usadas nos levantamentos. Os 4 utilizadores veem as mesmas opções.',
+  'bo.new': 'Novo',
+  'bo.newPh': 'Nome a adicionar',
+  'bo.hex': 'Cor no ecrã (#hex)',
+  'bo.needName': 'Indique um nome.',
+  'bo.delete': 'Apagar',
+  'bo.authors': 'Responsáveis do levantamento',
+  'bo.authorsHint': 'Nathaniel, Michael…',
+  'bo.siteTypes': 'Tipos de obra',
+  'bo.siteTypesHint': 'Casa, apartamento…',
+  'bo.workTypes': 'Natureza dos trabalhos',
+  'bo.workTypesHint': 'Renovação, novo…',
+  'bo.openings': 'Tipos de vão',
+  'bo.openingsHint': 'Janela, correr…',
+  'bo.poses': 'Tipos de aplicação',
+  'bo.posesHint': 'Aplique, túnel…',
+  'bo.colors': 'Cores RAL',
+  'bo.colorsHint': 'Nome + código hexadecimal',
+  'pdf.projectLead': 'Chefe de projeto',
+  'pdf.brandLine': 'Caixilharia de alumínio e PVC',
+  'pdf.report': 'RELATÓRIO',
+  'pdf.visitTitle': 'VISITA DE OBRA',
+  'pdf.visitSub': 'Levantamento técnico prévio à elaboração do orçamento',
+  'pdf.client': 'Cliente',
+  'pdf.address': 'Morada da obra',
+  'pdf.siteType': 'Tipo de imóvel',
+  'pdf.works': 'Trabalhos',
+  'pdf.summary': 'Síntese',
+  'pdf.author': 'Responsável',
+  'pdf.contact': 'Contacto do cliente',
+  'pdf.roomsCounted': 'Divisões levantadas',
+  'pdf.openingsCounted': 'Vãos levantados',
+  'pdf.generalNotes': 'Observações gerais',
+  'pdf.clientSign': 'Validação do cliente',
+  'pdf.signDate': 'Data e assinatura',
+  'pdf.nehocLead': 'Chefe de projeto NEHOC',
+  'pdf.footerConfidential': 'NEHOC — Relatório de visita confidencial',
+  'pdf.footerVisit': 'NEHOC — Relatório de visita',
+  'pdf.noPhoto': 'Nenhuma fotografia',
+  'pdf.survey': 'LEVANTAMENTO',
+  'pdf.openingN': 'Vão {n}/{total}',
+  'pdf.dims': 'Dimensões',
+  'pdf.qty': 'Quantidade',
+  'pdf.pose': 'Tipo de aplicação',
+  'pdf.color': 'Cor',
+  'pdf.room': 'Divisão',
+  'pdf.obs': 'Observações:',
+  'pdf.noOpening': 'Nenhum vão indicado.',
+  'pdf.roomFallback': 'Divisão {n}',
+  'pdf.roomMeta': '{n} vão',
+  'pdf.roomMetaMany': '{n} vãos',
+  'pdf.docTitle': 'Relatório NEHOC — {name}',
+  'plan.title': 'Aplicação e lembretes',
+  'plan.subtitle': 'Indique a data de aplicação e dois lembretes com data e hora. Serão propostos no calendário do telemóvel.',
+  'plan.tabPose': 'Aplicação',
+  'plan.tabR1': 'Lembrete 1',
+  'plan.tabR2': 'Lembrete 2',
+  'plan.poseDate': 'Data da aplicação',
+  'plan.reminder1': 'Primeiro lembrete (data e hora)',
+  'plan.reminder2': 'Segundo lembrete (data e hora)',
+  'plan.needAll': 'Preencha a data de aplicação e os dois lembretes.',
+  'plan.confirm': 'Confirmar',
+  'plan.cancel': 'Cancelar',
+  'plan.hint': 'Depois de confirmar, o telemóvel propõe adicionar estas datas à agenda (iPhone, Android ou calendário).',
+  'plan.addCalendar': 'Adicionar ao calendário do telemóvel',
+  'plan.savedPhone': 'Escolha Calendário para guardar a aplicação e os lembretes no telemóvel.',
+  'plan.downloaded': 'Ficheiro de calendário descarregado. Abra-o para o adicionar à agenda.',
+  'plan.calendarError': 'Não foi possível abrir o calendário. Verifique as datas e tente novamente.',
+  'site.tabSurvey': 'Levantamento',
+  'site.tabPlan': 'Aplicação e lembretes',
+};
+
+const dict: Record<Locale, Record<MsgKey, string>> = { fr, pt };
+
+const catalogPt: Record<string, string> = {
+  Maison: 'Casa',
+  Appartement: 'Apartamento',
+  Bureau: 'Escritório',
+  Immeuble: 'Prédio',
+  Commerce: 'Comércio',
+  Autre: 'Outro',
+  Rénovation: 'Renovação',
+  'Construction neuve': 'Construção nova',
+  Fenêtre: 'Janela',
+  'Porte-fenêtre': 'Porta-janela',
+  Coulissant: 'Correr',
+  'Baie vitrée': 'Vão envidraçado',
+  "Porte d'entrée": 'Porta de entrada',
+  Fixe: 'Fixo',
+  'À définir': 'A definir',
+  'Rénovation sur dormant existant': 'Renovação sobre caixilho existente',
+  'Dépose totale': 'Remoção total',
+  'Pose en applique': 'Aplicação em aplique',
+  'Pose en tunnel': 'Aplicação em túnel',
+  'Pose en feuillure': 'Aplicação em encosto',
+  'Chêne doré': 'Carvalho dourado',
+  Noyer: 'Nogueira',
+  'Autre couleur / RAL': 'Outra cor / RAL',
+};
+
+export function interpolate(template: string, vars?: Record<string, string | number>) {
+  if (!vars) return template;
+  return Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, String(v)), template);
+}
+
+export function translate(locale: Locale, key: MsgKey, vars?: Record<string, string | number>) {
+  return interpolate(dict[locale][key] || dict.fr[key], vars);
+}
+
+export function translateCatalog(locale: Locale, value: string) {
+  if (locale === 'pt') return catalogPt[value] || value;
+  return value;
+}
+
+export function dateLocale(locale: Locale) {
+  return locale === 'pt' ? 'pt-PT' : 'fr-FR';
+}
+
+type I18nValue = {
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+  t: (key: MsgKey, vars?: Record<string, string | number>) => string;
+  catalogLabel: (value: string) => string;
+  followLabel: (status: string) => string;
+  dateLocale: string;
+};
+
+const I18nContext = createContext<I18nValue | null>(null);
+
+function readLocale(): Locale {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw === 'pt' || raw === 'fr') return raw;
+  } catch {
+    /* ignore */
+  }
+  return 'fr';
+}
+
+export function LocaleProvider({ children }: { children: ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>(readLocale);
+
+  useEffect(() => {
+    document.documentElement.lang = locale === 'pt' ? 'pt' : 'fr';
+  }, [locale]);
+
+  const setLocale = (next: Locale) => {
+    setLocaleState(next);
+    try {
+      localStorage.setItem(KEY, next);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const value = useMemo<I18nValue>(
+    () => ({
+      locale,
+      setLocale,
+      t: (key, vars) => translate(locale, key, vars),
+      catalogLabel: (value) => translateCatalog(locale, value),
+      followLabel: (status) => {
+        const key = `follow.${status}` as MsgKey;
+        return key in dict.fr ? translate(locale, key) : status;
+      },
+      dateLocale: dateLocale(locale),
+    }),
+    [locale]
+  );
+
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+export function useI18n() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) throw new Error('useI18n must be used within LocaleProvider');
+  return ctx;
+}
+
+export function LanguageSwitcher({ className = '' }: { className?: string }) {
+  const { locale, setLocale, t } = useI18n();
+  return (
+    <div className={`lang-switch ${className}`.trim()} role="group" aria-label={t('lang.label')}>
+      <button type="button" className={locale === 'fr' ? 'is-active' : ''} onClick={() => setLocale('fr')}>
+        {t('lang.fr')}
+      </button>
+      <button type="button" className={locale === 'pt' ? 'is-active' : ''} onClick={() => setLocale('pt')}>
+        {t('lang.pt')}
+      </button>
+    </div>
+  );
+}
+
+export type { MsgKey };

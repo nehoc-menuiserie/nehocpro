@@ -32,6 +32,9 @@ export type Site = {
   siteType: string;
   workType: string;
   followUpStatus: string;
+  poseDate: string;
+  reminder1: string;
+  reminder2: string;
   generalNotes: string;
   generalPhotos: string[];
   rooms: Room[];

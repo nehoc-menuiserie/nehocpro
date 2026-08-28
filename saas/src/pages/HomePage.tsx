@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
+import { addPlanToPhone } from '../calendar';
 import { Button } from '../components/ui';
+import { PosePlanModal } from '../components/PosePlanModal';
 import { SmartPhoto } from '../components/SmartPhoto';
 import { SwipeDeleteRow } from '../components/SwipeDeleteRow';
 import { authorFullName } from '../constants';
@@ -9,24 +11,25 @@ import { useSites } from '../context';
 import {
   FOLLOW_UP_FILTERS,
   FOLLOW_UP_STATUSES,
+  SIGNED_STATUS,
   followUpTone,
   matchesFollowUpFilter,
   type FollowUpStatus,
+  type PosePlan,
 } from '../followUp';
+import { LanguageSwitcher, useI18n, type MsgKey } from '../i18n';
 import type { Site } from '../types';
 
-function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '';
-  }
-}
+const FILTER_KEYS: Record<string, MsgKey> = {
+  all: 'filter.all',
+  open: 'filter.open',
+  'Devis à faire': 'filter.todo',
+  'Devis envoyé': 'filter.sent',
+  'Devis signé': 'filter.signed',
+  Facturé: 'filter.invoiced',
+  Payé: 'filter.paid',
+  Perdu: 'filter.lost',
+};
 
 function countOpenings(site: Site) {
   return site.rooms.reduce((n, r) => n + r.openings.length, 0);
@@ -36,10 +39,42 @@ export function HomePage() {
   const navigate = useNavigate();
   const { sites, ready, syncing, remove, syncNow, upsert } = useSites();
   const { signOut } = useAuth();
+  const { t, followLabel, dateLocale } = useI18n();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('open');
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState('');
+  const [planSite, setPlanSite] = useState<Site | null>(null);
+
+  const sharePlan = async (next: Site) => {
+    try {
+      const how = await addPlanToPhone(next);
+      alert(how === 'shared' ? t('plan.savedPhone') : t('plan.downloaded'));
+    } catch {
+      alert(t('plan.calendarError'));
+    }
+  };
+
+  const formatDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleString(dateLocale, {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  };
+
+  const countLabel = (rooms: number, openings: number) =>
+    t('home.roomsOpenings', {
+      rooms,
+      roomWord: rooms > 1 ? t('word.rooms') : t('word.room'),
+      openings,
+      openingWord: openings > 1 ? t('word.openings') : t('word.opening'),
+    });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -58,10 +93,32 @@ export function HomePage() {
 
   const changeStatus = async (site: Site, followUpStatus: FollowUpStatus) => {
     if (site.followUpStatus === followUpStatus) return;
+    if (followUpStatus === SIGNED_STATUS) {
+      setPlanSite(site);
+      return;
+    }
     try {
       await upsert({ ...site, followUpStatus });
     } catch {
-      alert('Impossible de mettre à jour le suivi. Vérifiez le réseau.');
+      alert(t('home.followError'));
+    }
+  };
+
+  const confirmPlan = async (plan: PosePlan) => {
+    if (!planSite) return;
+    const next = {
+      ...planSite,
+      followUpStatus: SIGNED_STATUS,
+      poseDate: plan.poseDate,
+      reminder1: plan.reminder1,
+      reminder2: plan.reminder2,
+    };
+    setPlanSite(null);
+    try {
+      await upsert(next);
+      await sharePlan(next);
+    } catch {
+      alert(t('home.followError'));
     }
   };
 
@@ -71,32 +128,36 @@ export function HomePage() {
         <div className="brand-row">
           <img src="/logo-nehoc.jpeg" alt="NEHOC" className="logo" />
           <div>
-            <p className="kicker">Menuiserie aluminium</p>
+            <p className="kicker">{t('brand.kicker')}</p>
             <h1>NEHOCPRO</h1>
-            <p className="subtitle">Relevés de chantier</p>
+            <p className="subtitle">{t('brand.subtitle')}</p>
           </div>
         </div>
         <div className="stats">
           <div className="stat">
             <strong>{sites.length}</strong>
-            <span>Chantiers</span>
+            <span>{t('home.sites')}</span>
           </div>
           <div className="stat-divider" />
           <div className="stat">
             <strong>{openings}</strong>
-            <span>Menuiseries</span>
+            <span>{t('home.openings')}</span>
           </div>
           <div className="stat-divider" />
           <div className="stat">
             <strong>{waiting}</strong>
-            <span>Devis envoyés</span>
+            <span>{t('home.quotesSent')}</span>
           </div>
         </div>
       </section>
 
+      <div className="lang-row">
+        <LanguageSwitcher />
+      </div>
+
       <div className="toolbar">
         <Button
-          title={syncing ? 'Sync…' : 'Synchroniser'}
+          title={syncing ? t('common.syncing') : t('common.sync')}
           variant="secondary"
           disabled={busy}
           onClick={async () => {
@@ -104,23 +165,23 @@ export function HomePage() {
               setBusy(true);
               await syncNow();
             } catch {
-              alert('Synchronisation impossible. Vérifiez le réseau.');
+              alert(t('home.syncError'));
             } finally {
               setBusy(false);
             }
           }}
         />
-        <Button title="Déconnexion" variant="outline" onClick={() => signOut()} />
+        <Button title={t('common.logout')} variant="outline" onClick={() => signOut()} />
       </div>
 
       <input
         className="input search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Rechercher un client, une adresse…"
+        placeholder={t('home.search')}
       />
 
-      <div className="follow-filters" role="tablist" aria-label="Filtrer le suivi">
+      <div className="follow-filters" role="tablist" aria-label={t('home.filterAria')}>
         {FOLLOW_UP_FILTERS.map((item) => (
           <button
             key={item.id}
@@ -130,23 +191,19 @@ export function HomePage() {
             className={`follow-filter${filter === item.id ? ' is-active' : ''}`}
             onClick={() => setFilter(item.id)}
           >
-            {item.label}
+            {t(FILTER_KEYS[item.id] || 'filter.all')}
           </button>
         ))}
       </div>
 
-      <Button title="+ Nouveau chantier" className="cta" onClick={() => navigate('/site/new')} />
+      <Button title={t('home.newSite')} className="cta" onClick={() => navigate('/site/new')} />
 
       {!ready || busy ? (
         <div className="spinner" />
       ) : filtered.length === 0 ? (
         <div className="empty">
-          <h3>Aucun chantier</h3>
-          <p>
-            {sites.length
-              ? 'Aucun dossier dans cet état. Changez le filtre ou créez un relevé.'
-              : 'Créez un relevé, photographiez les menuiseries et générez le rapport PDF.'}
-          </p>
+          <h3>{t('home.emptyTitle')}</h3>
+          <p>{sites.length ? t('home.emptyFilter') : t('home.emptyAll')}</p>
         </div>
       ) : (
         <ul className="site-list">
@@ -168,26 +225,23 @@ export function HomePage() {
                       <div className="thumb fallback">{(item.clientName || 'N').slice(0, 1).toUpperCase()}</div>
                     )}
                     <div className="site-card-body">
-                      <strong>{item.clientName || 'Sans nom'}</strong>
-                      <span>{item.address || 'Adresse non renseignée'}</span>
+                      <strong>{item.clientName || t('home.noName')}</strong>
+                      <span>{item.address || t('home.noAddress')}</span>
                       <span>
-                        {authorFullName(item.author) || 'Responsable ?'} · {formatDate(item.updatedAt)}
+                        {authorFullName(item.author) || t('home.noAuthor')} · {formatDate(item.updatedAt)}
                       </span>
-                      <em>
-                        {item.rooms.length} pièce{item.rooms.length > 1 ? 's' : ''} · {countOpenings(item)} menuiserie
-                        {countOpenings(item) > 1 ? 's' : ''}
-                      </em>
+                      <em>{countLabel(item.rooms.length, countOpenings(item))}</em>
                     </div>
                   </Link>
                   <select
                     className={`follow-badge follow-${followUpTone(item.followUpStatus || 'Relevé')}`}
                     value={item.followUpStatus || 'Relevé'}
-                    aria-label={`Suivi de ${item.clientName || 'ce chantier'}`}
+                    aria-label={t('home.followOf', { name: item.clientName || t('home.thisSite') })}
                     onChange={(e) => changeStatus(item, e.target.value as FollowUpStatus)}
                   >
                     {FOLLOW_UP_STATUSES.map((status) => (
                       <option key={status} value={status}>
-                        {status}
+                        {followLabel(status)}
                       </option>
                     ))}
                   </select>
@@ -198,8 +252,16 @@ export function HomePage() {
         </ul>
       )}
       <Link to="/backoffice" className="footer-backoffice">
-        back office
+        {t('common.backoffice')}
       </Link>
+      {planSite ? (
+        <PosePlanModal
+          clientName={planSite.clientName}
+          initial={{ poseDate: planSite.poseDate, reminder1: planSite.reminder1, reminder2: planSite.reminder2 }}
+          onCancel={() => setPlanSite(null)}
+          onConfirm={confirmPlan}
+        />
+      ) : null}
     </div>
   );
 }

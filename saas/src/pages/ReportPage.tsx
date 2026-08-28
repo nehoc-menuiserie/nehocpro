@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui';
 import { authorFullName } from '../constants';
 import { useSites } from '../context';
+import { LanguageSwitcher, useI18n } from '../i18n';
 import { buildReportHtml } from '../reportHtml';
 import { buildReportPdfFromPreview, sharePdfFile } from '../shareWhatsApp';
 
@@ -55,6 +56,7 @@ export function ReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { getSite, ready } = useSites();
+  const { t, locale } = useI18n();
   const site = id ? getSite(id) : undefined;
   const wrapRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -89,12 +91,12 @@ export function ReportPage() {
     let alive = true;
     setBusy(true);
     setError('');
-    buildReportHtml(site)
+    buildReportHtml(site, locale)
       .then((next) => {
         if (alive) setHtml(next);
       })
       .catch((err) => {
-        if (alive) setError(err instanceof Error ? err.message : 'Impossible de générer le rapport.');
+        if (alive) setError(err instanceof Error ? err.message : t('report.generateError'));
       })
       .finally(() => {
         if (alive) setBusy(false);
@@ -102,7 +104,7 @@ export function ReportPage() {
     return () => {
       alive = false;
     };
-  }, [site]);
+  }, [site, locale, t]);
 
   useEffect(() => {
     pdfFileRef.current = null;
@@ -124,7 +126,7 @@ export function ReportPage() {
   const printPreview = () => {
     const frame = iframeRef.current;
     if (!frame?.contentWindow) {
-      alert('L’aperçu n’est pas encore prêt.');
+      alert(t('report.notReady'));
       return;
     }
     frame.contentWindow.focus();
@@ -141,11 +143,11 @@ export function ReportPage() {
       pdfFileRef.current = file;
       const result = await sharePdfFile(file);
       if (result === 'saved') {
-        setPdfHint('Le PDF a été enregistré. Appuyez encore sur le bouton pour choisir WhatsApp, ou joignez le fichier dans une conversation.');
+        setPdfHint(t('report.pdfSaved'));
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
-      setPdfHint(err instanceof Error ? err.message : 'Impossible de partager le PDF.');
+      setPdfHint(err instanceof Error ? err.message : t('report.shareError'));
     } finally {
       setSharing(false);
     }
@@ -162,8 +164,8 @@ export function ReportPage() {
   if (!site) {
     return (
       <div className="page">
-        <Button title="← Retour" variant="ghost" onClick={() => navigate('/')} />
-        <p className="subtitle">Chantier introuvable.</p>
+        <Button title={t('common.back')} variant="ghost" onClick={() => navigate('/')} />
+        <p className="subtitle">{t('site.missing')}</p>
       </div>
     );
   }
@@ -171,17 +173,22 @@ export function ReportPage() {
   return (
     <div className="page report-page">
       <header className="page-head">
-        <Button title="← Chantier" variant="ghost" onClick={() => navigate(`/site/${site.id}`)} />
-        <h1>Aperçu du rapport</h1>
-        <span />
+        <Button title={t('common.backSite')} variant="ghost" onClick={() => navigate(`/site/${site.id}`)} />
+        <h1>{t('report.title')}</h1>
+        <LanguageSwitcher />
       </header>
 
       <div className="report-hero">
-        <p className="kicker">Visite de chantier</p>
+        <p className="kicker">{t('report.kicker')}</p>
         <h2>{site.clientName}</h2>
         <p>
-          {authorFullName(site.author)} · {site.rooms.length} pièce{site.rooms.length > 1 ? 's' : ''} · {total}{' '}
-          menuiserie{total > 1 ? 's' : ''}
+          {authorFullName(site.author)} ·{' '}
+          {t('home.roomsOpenings', {
+            rooms: site.rooms.length,
+            roomWord: site.rooms.length > 1 ? t('word.rooms') : t('word.room'),
+            openings: total,
+            openingWord: total > 1 ? t('word.openings') : t('word.opening'),
+          })}
         </p>
       </div>
 
@@ -190,27 +197,27 @@ export function ReportPage() {
           {telHref(site.clientPhone) ? (
             <a className="btn btn-call" href={telHref(site.clientPhone)}>
               <PhoneIcon />
-              Appeler
+              {t('report.call')}
             </a>
           ) : (
             <button type="button" className="btn btn-call" disabled>
               <PhoneIcon />
-              Pas de téléphone
+              {t('report.noPhone')}
             </button>
           )}
           {mailHref(site.clientEmail, site.clientName) ? (
             <a className="btn btn-mail" href={mailHref(site.clientEmail, site.clientName)}>
               <MailIcon />
-              E-mail
+              {t('report.mail')}
             </a>
           ) : (
             <button type="button" className="btn btn-mail" disabled>
               <MailIcon />
-              Pas d’e-mail
+              {t('report.noMail')}
             </button>
           )}
         </div>
-        <Button title="Imprimer / enregistrer en PDF" onClick={printPreview} disabled={busy || !html} />
+        <Button title={t('report.print')} onClick={printPreview} disabled={busy || !html} />
         <button
           type="button"
           className="btn btn-whatsapp"
@@ -218,10 +225,10 @@ export function ReportPage() {
           disabled={busy || !html || sharing}
         >
           <WhatsAppIcon />
-          {sharing ? 'Préparation du PDF…' : 'Envoyer le PDF sur WhatsApp'}
+          {sharing ? t('report.preparing') : t('report.whatsapp')}
         </button>
         <p className="hint">
-          {pdfHint || 'Choisissez WhatsApp, puis le contact. C’est le PDF du rapport qui part, pas un texte.'}
+          {pdfHint || t('report.hint')}
         </p>
       </div>
 
@@ -233,7 +240,7 @@ export function ReportPage() {
           <iframe
             ref={iframeRef}
             className="report-preview"
-            title="Aperçu du rapport PDF"
+            title={t('report.previewAria')}
             srcDoc={html}
             onLoad={fitPreview}
           />

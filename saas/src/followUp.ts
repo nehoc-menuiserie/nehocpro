@@ -75,6 +75,44 @@ export function encodeFollowUpMark(notes: string, status: string) {
   return `[SUIVI:${normalizeFollowUp(status)}]\n${stripFollowUpMark(notes)}`;
 }
 
+export type PosePlan = {
+  poseDate: string;
+  reminder1: string;
+  reminder2: string;
+};
+
+const PLAN_RE = /\[PLAN:([^\]]*)\]\n?/;
+
+export function parsePlanMark(notes: string): PosePlan {
+  const match = notes.match(PLAN_RE);
+  const parts = (match?.[1] || '').split('|');
+  return {
+    poseDate: parts[0] || '',
+    reminder1: parts[1] || '',
+    reminder2: parts[2] || '',
+  };
+}
+
+export function stripPlanMark(notes: string) {
+  return notes.replace(PLAN_RE, '');
+}
+
+export function encodePlanMark(notes: string, plan: PosePlan) {
+  const clean = stripPlanMark(notes);
+  if (!plan.poseDate && !plan.reminder1 && !plan.reminder2) return clean;
+  return `[PLAN:${plan.poseDate}|${plan.reminder1}|${plan.reminder2}]\n${clean}`;
+}
+
+export function planFromSite(site: { poseDate?: string; reminder1?: string; reminder2?: string }): PosePlan {
+  return {
+    poseDate: site.poseDate || '',
+    reminder1: site.reminder1 || '',
+    reminder2: site.reminder2 || '',
+  };
+}
+
+export const SIGNED_STATUS = 'Devis signé';
+
 export function followUpFromRecord(status: unknown, notes: string): FollowUpStatus {
   const fromColumn = String(status || '').trim();
   if (isFollowUpStatus(fromColumn)) return fromColumn;

@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { addPlanToPhone } from '../calendar';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { FollowUpPicker } from '../components/FollowUpPicker';
+import { PosePlanModal } from '../components/PosePlanModal';
 import { Button, Card, ColorSwatch, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
 import { useCatalog } from '../catalog';
 import { useSites } from '../context';
+import { SIGNED_STATUS, type FollowUpStatus, type PosePlan } from '../followUp';
 import { composeClientName, createEmptyOpening, createEmptyRoom, createEmptySite, normalizeSite } from '../storage';
+import { LanguageSwitcher, useI18n } from '../i18n';
 import type { Opening, Room, Site } from '../types';
 
 export function SitePage() {
@@ -13,11 +17,14 @@ export function SitePage() {
   const navigate = useNavigate();
   const { getSite, upsert, ready } = useSites();
   const { labels } = useCatalog();
+  const { t, catalogLabel } = useI18n();
   const isNew = !id || id === 'new';
   const [site, setSite] = useState<Site | null>(null);
   const [missing, setMissing] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<'survey' | 'plan'>('survey');
+  const [planOpen, setPlanOpen] = useState(false);
 
   useEffect(() => {
     if (!ready) return;
@@ -31,13 +38,14 @@ export function SitePage() {
     const next = found ? normalizeSite(JSON.parse(JSON.stringify(found)) as Site) : createEmptySite();
     setSite(next);
     setActiveRoomId(next.rooms[0]?.id || '');
+    setView('survey');
   }, [ready, id, isNew]);
 
   if (missing) {
     return (
       <div className="page">
-        <Button title="← Accueil" variant="ghost" onClick={() => navigate('/')} />
-        <p className="subtitle">Chantier introuvable.</p>
+        <Button title={t('common.backHome')} variant="ghost" onClick={() => navigate('/')} />
+        <p className="subtitle">{t('site.missing')}</p>
       </div>
     );
   }
@@ -53,6 +61,44 @@ export function SitePage() {
   const openingCount = site.rooms.reduce((n, r) => n + r.openings.length, 0);
 
   const patch = (partial: Partial<Site>) => setSite((s) => (s ? { ...s, ...partial } : s));
+
+  const sharePlan = async (next: Site) => {
+    try {
+      const how = await addPlanToPhone(next);
+      alert(how === 'shared' ? t('plan.savedPhone') : t('plan.downloaded'));
+    } catch {
+      alert(t('plan.calendarError'));
+    }
+  };
+
+  const requestStatus = (followUpStatus: FollowUpStatus) => {
+    if (followUpStatus === SIGNED_STATUS && site.followUpStatus !== SIGNED_STATUS) {
+      setPlanOpen(true);
+      return;
+    }
+    patch({ followUpStatus });
+  };
+
+  const confirmPlan = async (plan: PosePlan) => {
+    const next = {
+      ...site,
+      followUpStatus: SIGNED_STATUS,
+      poseDate: plan.poseDate,
+      reminder1: plan.reminder1,
+      reminder2: plan.reminder2,
+    };
+    setSite(next);
+    setPlanOpen(false);
+    setView('plan');
+    try {
+      await upsert(next);
+      await sharePlan(next);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t('site.saveError'));
+    }
+  };
+
+  const showPlanTab = site.followUpStatus === SIGNED_STATUS || Boolean(site.poseDate || site.reminder1 || site.reminder2);
 
   const updateRoom = (roomId: string, partial: Partial<Room>) => {
     setSite((s) =>
@@ -109,11 +155,11 @@ export function SitePage() {
 
   const validate = () => {
     if (!site.author) {
-      alert('Sélectionnez la personne qui effectue le relevé.');
+      alert(t('site.needAuthor'));
       return false;
     }
     if (!site.clientFirstName.trim() || !site.clientLastName.trim()) {
-      alert('Indiquez le prénom et le nom du client.');
+      alert(t('site.needName'));
       return false;
     }
     return true;
@@ -125,10 +171,10 @@ export function SitePage() {
     try {
       const saved = await upsert(site);
       setSite(saved);
-      alert('Le chantier et les photos ont été enregistrés dans le cloud.');
+      alert(t('site.saved'));
       if (isNew) navigate(`/site/${saved.id}`, { replace: true });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Enregistrement impossible. Vérifiez le réseau et réessayez.');
+      alert(err instanceof Error ? err.message : t('site.saveError'));
     } finally {
       setSaving(false);
     }
@@ -141,28 +187,86 @@ export function SitePage() {
       setSite(saved);
       navigate(`/report/${saved.id}`);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Enregistrement impossible. Vérifiez le réseau et réessayez.');
+      alert(err instanceof Error ? err.message : t('site.saveError'));
     }
   };
 
   return (
     <div className="page site-page">
       <header className="page-head">
-        <Button title="← Accueil" variant="ghost" onClick={() => navigate('/')} />
+        <Button title={t('common.backHome')} variant="ghost" onClick={() => navigate('/')} />
         <div className="page-head-center">
-          <h1>{isNew ? 'Nouveau chantier' : 'Chantier'}</h1>
+          <h1>{isNew ? t('site.newTitle') : t('site.title')}</h1>
           <p>
-            {site.rooms.length} pièce{site.rooms.length > 1 ? 's' : ''} · {openingCount} menuiserie
-            {openingCount > 1 ? 's' : ''}
+            {t('home.roomsOpenings', {
+              rooms: site.rooms.length,
+              roomWord: site.rooms.length > 1 ? t('word.rooms') : t('word.room'),
+              openings: openingCount,
+              openingWord: openingCount > 1 ? t('word.openings') : t('word.opening'),
+            })}
           </p>
         </div>
+        <LanguageSwitcher />
       </header>
 
+      {showPlanTab ? (
+        <div className="site-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'survey'}
+            className={view === 'survey' ? 'is-active' : ''}
+            onClick={() => setView('survey')}
+          >
+            {t('site.tabSurvey')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'plan'}
+            className={view === 'plan' ? 'is-active' : ''}
+            onClick={() => setView('plan')}
+          >
+            {t('site.tabPlan')}
+          </button>
+        </div>
+      ) : null}
+
+      {view === 'plan' ? (
+        <Card>
+          <SectionTitle>{t('plan.title')}</SectionTitle>
+          <p className="follow-hint">{t('plan.subtitle')}</p>
+          <div className="form-grid">
+            <Field label={t('plan.poseDate')}>
+              <Input type="date" value={site.poseDate} onChange={(e) => patch({ poseDate: e.target.value })} />
+            </Field>
+            <Field label={t('plan.reminder1')} className="field-span">
+              <Input type="datetime-local" value={site.reminder1} onChange={(e) => patch({ reminder1: e.target.value })} />
+            </Field>
+            <Field label={t('plan.reminder2')} className="field-span">
+              <Input type="datetime-local" value={site.reminder2} onChange={(e) => patch({ reminder2: e.target.value })} />
+            </Field>
+          </div>
+          <Button
+            title={t('plan.addCalendar')}
+            variant="secondary"
+            className="plan-cal-btn"
+            onClick={() => {
+              if (!site.poseDate || !site.reminder1 || !site.reminder2) {
+                alert(t('plan.needAll'));
+                return;
+              }
+              void sharePlan(site);
+            }}
+          />
+        </Card>
+      ) : (
+      <>
       <div className="site-grid">
         <Card>
-          <SectionTitle>Responsable du relevé</SectionTitle>
+          <SectionTitle>{t('site.authorTitle')}</SectionTitle>
           <Select
-            label="Relevé effectué par *"
+            label={t('site.authorLabel')}
             value={site.author}
             options={['', ...labels('authors')]}
             onChange={(e) => patch({ author: e.target.value })}
@@ -170,15 +274,15 @@ export function SitePage() {
         </Card>
 
         <Card>
-          <SectionTitle>Suivi du chantier</SectionTitle>
-          <p className="follow-hint">Où en est le dossier, du relevé jusqu’au paiement.</p>
-          <FollowUpPicker value={site.followUpStatus || 'Relevé'} onChange={(followUpStatus) => patch({ followUpStatus })} />
+          <SectionTitle>{t('site.followTitle')}</SectionTitle>
+          <p className="follow-hint">{t('site.followHint')}</p>
+          <FollowUpPicker value={site.followUpStatus || 'Relevé'} onChange={requestStatus} />
         </Card>
 
         <Card className="site-grid-span">
-          <SectionTitle>Client et chantier</SectionTitle>
+          <SectionTitle>{t('site.clientTitle')}</SectionTitle>
           <div className="form-grid">
-            <Field label="Prénom *">
+            <Field label={t('site.firstName')}>
               <Input
                 value={site.clientFirstName}
                 autoComplete="given-name"
@@ -190,7 +294,7 @@ export function SitePage() {
                 }
               />
             </Field>
-            <Field label="Nom *">
+            <Field label={t('site.lastName')}>
               <Input
                 value={site.clientLastName}
                 autoComplete="family-name"
@@ -202,64 +306,64 @@ export function SitePage() {
                 }
               />
             </Field>
-            <Field label="Adresse du chantier" className="field-span">
+            <Field label={t('site.address')} className="field-span">
               <Input value={site.address} autoComplete="street-address" onChange={(e) => patch({ address: e.target.value })} />
             </Field>
-            <Field label="Téléphone">
+            <Field label={t('site.phone')}>
               <Input value={site.clientPhone} onChange={(e) => patch({ clientPhone: e.target.value })} type="tel" />
             </Field>
-            <Field label="E-mail">
+            <Field label={t('site.email')}>
               <Input value={site.clientEmail} onChange={(e) => patch({ clientEmail: e.target.value })} type="email" />
             </Field>
             <Select
-              label="Type de chantier"
+              label={t('site.siteType')}
               value={site.siteType}
-              options={labels('site_types')}
+              options={labels('site_types').map((v) => ({ value: v, label: catalogLabel(v) }))}
               onChange={(e) => patch({ siteType: e.target.value })}
             />
             <Select
-              label="Nature des travaux"
+              label={t('site.workType')}
               value={site.workType}
-              options={labels('work_types')}
+              options={labels('work_types').map((v) => ({ value: v, label: catalogLabel(v) }))}
               onChange={(e) => patch({ workType: e.target.value })}
             />
           </div>
-          <Field label="Notes générales">
+          <Field label={t('site.notes')}>
             <Textarea value={site.generalNotes} onChange={(e) => patch({ generalNotes: e.target.value })} rows={4} />
           </Field>
         </Card>
       </div>
 
       <Card>
-        <SectionTitle>Photos générales</SectionTitle>
+        <SectionTitle>{t('site.photos')}</SectionTitle>
         <PhotoGrid siteId={site.id} uris={site.generalPhotos} onChange={(generalPhotos) => patch({ generalPhotos })} />
       </Card>
 
       <div className="section-head">
-        <h2 className="block-title">Pièces et menuiseries</h2>
-        <Button title="+ Pièce" variant="secondary" onClick={addRoom} />
+        <h2 className="block-title">{t('site.roomsTitle')}</h2>
+        <Button title={t('site.addRoom')} variant="secondary" onClick={addRoom} />
       </div>
 
       {site.rooms.map((room, index) => (
         <Card key={room.id} className={activeRoomId === room.id ? 'room-card is-active' : 'room-card'}>
           <div className="section-head">
-            <h3>Pièce {index + 1}</h3>
+            <h3>{t('site.roomN', { n: index + 1 })}</h3>
             <Button
-              title="Supprimer"
+              title={t('common.delete')}
               variant="danger"
               onClick={() => setSite((s) => (s ? { ...s, rooms: s.rooms.filter((r) => r.id !== room.id) } : s))}
             />
           </div>
           <div className="form-grid">
-            <Field label="Nom de la pièce">
+            <Field label={t('site.roomName')}>
               <Input
                 value={room.name}
-                placeholder="Ex. Séjour, Chambre 1…"
+                placeholder={t('site.roomNamePh')}
                 onFocus={() => setActiveRoomId(room.id)}
                 onChange={(e) => updateRoom(room.id, { name: e.target.value })}
               />
             </Field>
-            <Field label="Notes sur la pièce">
+            <Field label={t('site.roomNotes')}>
               <Textarea
                 value={room.notes}
                 rows={2}
@@ -272,9 +376,9 @@ export function SitePage() {
           {room.openings.map((op, oi) => (
             <div key={op.id} className="opening">
               <div className="section-head">
-                <h4>Menuiserie {oi + 1}</h4>
+                <h4>{t('site.openingN', { n: oi + 1 })}</h4>
                 <Button
-                  title="Supprimer"
+                  title={t('common.delete')}
                   variant="danger"
                   onClick={() =>
                     updateRoom(room.id, { openings: room.openings.filter((o) => o.id !== op.id) })
@@ -283,26 +387,26 @@ export function SitePage() {
               </div>
               <div className="form-grid">
                 <Select
-                  label="Type"
+                  label={t('site.type')}
                   value={op.type}
-                  options={labels('opening_types')}
+                  options={labels('opening_types').map((v) => ({ value: v, label: catalogLabel(v) }))}
                   onChange={(e) => updateOpening(room.id, op.id, { type: e.target.value })}
                 />
-                <Field label="Repère">
+                <Field label={t('site.ref')}>
                   <Input
                     value={op.ref}
-                    placeholder="Ex. F01"
+                    placeholder={t('site.refPh')}
                     onChange={(e) => updateOpening(room.id, op.id, { ref: e.target.value })}
                   />
                 </Field>
-                <Field label="Largeur (mm)">
+                <Field label={t('site.width')}>
                   <Input
                     value={op.width}
                     inputMode="numeric"
                     onChange={(e) => updateOpening(room.id, op.id, { width: e.target.value })}
                   />
                 </Field>
-                <Field label="Hauteur (mm)">
+                <Field label={t('site.height')}>
                   <Input
                     value={op.height}
                     inputMode="numeric"
@@ -310,12 +414,12 @@ export function SitePage() {
                   />
                 </Field>
                 <Select
-                  label="Type de pose"
+                  label={t('site.pose')}
                   value={op.pose}
-                  options={labels('pose_types')}
+                  options={labels('pose_types').map((v) => ({ value: v, label: catalogLabel(v) }))}
                   onChange={(e) => updateOpening(room.id, op.id, { pose: e.target.value })}
                 />
-                <Field label="Quantité">
+                <Field label={t('site.qty')}>
                   <Input
                     value={op.quantity}
                     inputMode="numeric"
@@ -323,16 +427,19 @@ export function SitePage() {
                   />
                 </Field>
               </div>
-              <span className="label">Couleur extérieure (RAL)</span>
+              <span className="label">{t('site.color')}</span>
               <div className="color-row">
                 <ColorSwatch value={op.colorRal} size={42} />
                 <Select
                   value={op.colorRal}
-                  options={[{ value: '', label: 'À définir' }, ...labels('ral_colors').map((v) => ({ value: v, label: v }))]}
+                  options={[
+                    { value: '', label: t('common.toDefine') },
+                    ...labels('ral_colors').map((v) => ({ value: v, label: catalogLabel(v) })),
+                  ]}
                   onChange={(e) => updateOpening(room.id, op.id, { colorRal: e.target.value })}
                 />
               </div>
-              <Field label="Notes">
+              <Field label={t('site.openingNotes')}>
                 <Textarea
                   value={op.notes}
                   rows={2}
@@ -346,20 +453,49 @@ export function SitePage() {
               />
             </div>
           ))}
-          <Button title="+ Ajouter une menuiserie" variant="secondary" onClick={() => addOpening(room.id)} />
+          <Button title={t('site.addOpeningLong')} variant="secondary" onClick={() => addOpening(room.id)} />
         </Card>
       ))}
+      </>
+      )}
 
       <div className="sticky-bar">
-        <div className="sticky-row">
-          <Button title="+ Pièce" variant="outline" onClick={addRoom} />
-          <Button title="+ Menuiserie" variant="outline" onClick={() => addOpening()} />
-        </div>
-        <div className="sticky-row">
-          <Button title={saving ? 'Enregistrement…' : 'Enregistrer'} onClick={onSave} disabled={saving} />
-          <Button title="Rapport PDF" variant="secondary" onClick={onReport} />
-        </div>
+        {view === 'plan' ? (
+          <div className="sticky-row">
+            <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
+            <Button
+              title={t('plan.addCalendar')}
+              variant="secondary"
+              onClick={() => {
+                if (!site.poseDate || !site.reminder1 || !site.reminder2) {
+                  alert(t('plan.needAll'));
+                  return;
+                }
+                void sharePlan(site);
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="sticky-row">
+              <Button title={t('site.addRoom')} variant="outline" onClick={addRoom} />
+              <Button title={t('site.addOpening')} variant="outline" onClick={() => addOpening()} />
+            </div>
+            <div className="sticky-row">
+              <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
+              <Button title={t('site.reportPdf')} variant="secondary" onClick={onReport} />
+            </div>
+          </>
+        )}
       </div>
+      {planOpen ? (
+        <PosePlanModal
+          clientName={site.clientName}
+          initial={{ poseDate: site.poseDate, reminder1: site.reminder1, reminder2: site.reminder2 }}
+          onCancel={() => setPlanOpen(false)}
+          onConfirm={confirmPlan}
+        />
+      ) : null}
     </div>
   );
 }

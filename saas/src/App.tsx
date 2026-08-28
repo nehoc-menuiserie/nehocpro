@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './auth';
 import { CatalogProvider } from './catalog';
 import { Topbar } from './components/Topbar';
 import { SitesProvider, useSites } from './context';
+import { LocaleProvider } from './i18n';
 import { BackofficePage } from './pages/BackofficePage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
@@ -51,14 +52,16 @@ function Shell() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CatalogProvider>
-        <SitesProvider>
-          <BrowserRouter>
-            <Shell />
-          </BrowserRouter>
-        </SitesProvider>
-      </CatalogProvider>
-    </AuthProvider>
+    <LocaleProvider>
+      <AuthProvider>
+        <CatalogProvider>
+          <SitesProvider>
+            <BrowserRouter>
+              <Shell />
+            </BrowserRouter>
+          </SitesProvider>
+        </CatalogProvider>
+      </AuthProvider>
+    </LocaleProvider>
   );
 }

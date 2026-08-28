@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useAuth } from '../auth';
 import { Button, Field, Input } from '../components/ui';
+import { LanguageSwitcher, useI18n } from '../i18n';
 
 export function LoginPage() {
   const { signIn, configured } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -11,18 +13,18 @@ export function LoginPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email.trim() || password.length < 6) {
-      alert('Indiquez un e-mail et un mot de passe d’au moins 6 caractères.');
+      alert(t('login.needCredentials'));
       return;
     }
     if (!configured) {
-      alert('Les clés Supabase ne sont pas encore configurées.');
+      alert(t('login.noKeys'));
       return;
     }
     setBusy(true);
     try {
       await signIn(email, password);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Connexion impossible.');
+      alert(err instanceof Error ? err.message : t('login.failed'));
     } finally {
       setBusy(false);
     }
@@ -31,11 +33,14 @@ export function LoginPage() {
   return (
     <div className="login-gate">
       <form className="login-form" onSubmit={submit}>
+        <div className="lang-row">
+          <LanguageSwitcher />
+        </div>
         <img src="/logo-nehoc.jpeg" alt="NEHOC" className="logo" />
-        <p className="kicker">Cloud NEHOC</p>
-        <h1>Connexion</h1>
-        <p className="subtitle">Connectez-vous avec votre compte équipe pour accéder à NEHOCPRO.</p>
-        <Field label="E-mail">
+        <p className="kicker">{t('login.kicker')}</p>
+        <h1>{t('login.title')}</h1>
+        <p className="subtitle">{t('login.subtitle')}</p>
+        <Field label={t('login.email')}>
           <Input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -46,15 +51,15 @@ export function LoginPage() {
             autoFocus
           />
         </Field>
-        <Field label="Mot de passe">
+        <Field label={t('login.password')}>
           <Input
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             type="password"
-            placeholder="mot de passe"
+            placeholder={t('login.passwordPh')}
           />
         </Field>
-        <Button title={busy ? 'Connexion…' : 'Se connecter'} disabled={busy || !configured} type="submit" />
+        <Button title={busy ? t('login.submitting') : t('login.submit')} disabled={busy || !configured} type="submit" />
       </form>
     </div>
   );

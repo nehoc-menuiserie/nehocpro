@@ -81,6 +81,42 @@ export function followUpFromRecord(status: unknown, notes: string): FollowUpStat
   return parseFollowUpMark(notes) || FOLLOW_UP_DEFAULT;
 }
 
+export type PosePlan = {
+  poseDate: string;
+  reminder1: string;
+  reminder2: string;
+};
+
+const PLAN_RE = /\[PLAN:([^\]]*)\]\n?/;
+
+export function parsePlanMark(notes: string): PosePlan {
+  const match = notes.match(PLAN_RE);
+  const parts = (match?.[1] || '').split('|');
+  return {
+    poseDate: parts[0] || '',
+    reminder1: parts[1] || '',
+    reminder2: parts[2] || '',
+  };
+}
+
+export function stripPlanMark(notes: string) {
+  return notes.replace(PLAN_RE, '');
+}
+
+export function encodePlanMark(notes: string, plan: PosePlan) {
+  const clean = stripPlanMark(notes);
+  if (!plan.poseDate && !plan.reminder1 && !plan.reminder2) return clean;
+  return `[PLAN:${plan.poseDate}|${plan.reminder1}|${plan.reminder2}]\n${clean}`;
+}
+
+export function planFromSite(site: { poseDate?: string; reminder1?: string; reminder2?: string }): PosePlan {
+  return {
+    poseDate: site.poseDate || '',
+    reminder1: site.reminder1 || '',
+    reminder2: site.reminder2 || '',
+  };
+}
+
 export const FOLLOW_UP_COLORS: Record<string, { bg: string; text: string }> = {
   idle: { bg: '#2A2A30', text: '#C9C4B8' },
   warn: { bg: '#3D2E14', text: '#E6C07B' },

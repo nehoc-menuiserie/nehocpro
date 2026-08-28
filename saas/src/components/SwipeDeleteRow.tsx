@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type PointerEvent, type MouseEvent } from 'react';
+import { useI18n } from '../i18n';
 
 const ACTION_WIDTH = 76;
 
@@ -32,6 +33,7 @@ export function SwipeDeleteRow({
   const offsetRef = useRef(0);
   const [offset, setOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const { t } = useI18n();
 
   const moveTo = (value: number) => {
     const next = Math.max(0, Math.min(ACTION_WIDTH, value));
@@ -89,7 +91,7 @@ export function SwipeDeleteRow({
   return (
     <div className="swipe-row">
       <div className="swipe-row-actions">
-        <button type="button" className="swipe-delete" aria-label="Supprimer le chantier" onClick={onDelete}>
+        <button type="button" className="swipe-delete" aria-label={t('swipe.delete')} onClick={onDelete}>
           <TrashIcon />
         </button>
       </div>

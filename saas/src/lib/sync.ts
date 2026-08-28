@@ -1,5 +1,14 @@
 import type { Site } from '../types';
-import { FOLLOW_UP_DEFAULT, encodeFollowUpMark, followUpFromRecord, stripFollowUpMark } from '../followUp';
+import {
+  FOLLOW_UP_DEFAULT,
+  encodeFollowUpMark,
+  encodePlanMark,
+  followUpFromRecord,
+  parsePlanMark,
+  planFromSite,
+  stripFollowUpMark,
+  stripPlanMark,
+} from '../followUp';
 import { mapSitePhotos, splitClientName, uid } from '../storage';
 import { PHOTO_PREFIX, cloudPhotoPath, isCloudPhoto, supabase } from './supabase';
 
@@ -94,10 +103,11 @@ async function upsertSiteRecord(site: Site, userId: string) {
     work_type: site.workType,
     updated_at: site.updatedAt,
   };
+  const notesWithPlan = encodePlanMark(site.generalNotes, planFromSite(site));
   if (followUpColumnEnabled) {
     const { error } = await supabase.from('sites').upsert({
       ...base,
-      general_notes: site.generalNotes,
+      general_notes: notesWithPlan,
       follow_up_status: site.followUpStatus,
     });
     if (!error) return;
@@ -106,7 +116,7 @@ async function upsertSiteRecord(site: Site, userId: string) {
   }
   const { error } = await supabase.from('sites').upsert({
     ...base,
-    general_notes: encodeFollowUpMark(site.generalNotes, site.followUpStatus),
+    general_notes: encodeFollowUpMark(notesWithPlan, site.followUpStatus),
   });
   if (error) throw error;
 }
@@ -252,6 +262,8 @@ export async function pullSites(): Promise<Site[]> {
               .filter(Boolean),
           })),
       }));
+    const notes = String(row.general_notes || '');
+    const plan = parsePlanMark(notes);
     return {
       id: String(row.id),
       author: String(row.author || ''),
@@ -263,11 +275,11 @@ export async function pullSites(): Promise<Site[]> {
       address: String(row.address || ''),
       siteType: String(row.site_type || 'Maison'),
       workType: String(row.work_type || 'Rénovation'),
-      followUpStatus: followUpFromRecord(
-        (row as Record<string, unknown>).follow_up_status,
-        String(row.general_notes || '')
-      ),
-      generalNotes: stripFollowUpMark(String(row.general_notes || '')),
+      followUpStatus: followUpFromRecord((row as Record<string, unknown>).follow_up_status, notes),
+      poseDate: plan.poseDate,
+      reminder1: plan.reminder1,
+      reminder2: plan.reminder2,
+      generalNotes: stripPlanMark(stripFollowUpMark(notes)),
       updatedAt: String(row.updated_at || new Date().toISOString()),
       generalPhotos: (photoRows || [])
         .filter((p) => p.site_id === row.id && p.kind === 'general')

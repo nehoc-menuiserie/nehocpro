@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { FOLLOW_UP_DEFAULT, followUpFromRecord, stripFollowUpMark } from './followUp';
+import { FOLLOW_UP_DEFAULT, followUpFromRecord, parsePlanMark, stripFollowUpMark, stripPlanMark } from './followUp';
 import type { Opening, Room, Site } from './types';
 
 const KEY = 'nehocpro_sites_v02';
@@ -43,6 +43,9 @@ export function createEmptySite(): Site {
     siteType: 'Maison',
     workType: 'Rénovation',
     followUpStatus: FOLLOW_UP_DEFAULT,
+    poseDate: '',
+    reminder1: '',
+    reminder2: '',
     generalNotes: '',
     generalPhotos: [],
     rooms: [createEmptyRoom()],
@@ -80,7 +83,10 @@ export function normalizeSite(raw: Partial<Site> & Record<string, unknown>): Sit
     siteType: asString(raw.siteType) || 'Maison',
     workType: asString(raw.workType) || 'Rénovation',
     followUpStatus: followUpFromRecord(raw.followUpStatus, asString(raw.generalNotes)),
-    generalNotes: stripFollowUpMark(asString(raw.generalNotes)),
+    poseDate: asString(raw.poseDate) || parsePlanMark(asString(raw.generalNotes)).poseDate,
+    reminder1: asString(raw.reminder1) || parsePlanMark(asString(raw.generalNotes)).reminder1,
+    reminder2: asString(raw.reminder2) || parsePlanMark(asString(raw.generalNotes)).reminder2,
+    generalNotes: stripPlanMark(stripFollowUpMark(asString(raw.generalNotes))),
     generalPhotos: Array.isArray(raw.generalPhotos) ? raw.generalPhotos.map(asString) : [],
     rooms: rooms.map((r) => {
       const room = r as Partial<Room>;

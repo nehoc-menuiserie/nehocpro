@@ -1,5 +1,6 @@
 import { lookupColorHex } from './catalog';
 import { authorFullName, isUndefinedColor, WOOD_GRADIENTS } from './constants';
+import { dateLocale, translate, translateCatalog, type Locale } from './i18n';
 import { resolvePhotoUri } from './lib/sync';
 import { isCloudPhoto } from './lib/supabase';
 import type { Site } from './types';
@@ -60,17 +61,21 @@ function colorSwatch(value: string) {
   return `<span class="report-color-value"><i class="report-color-swatch${undef ? ' is-undefined' : ''}" style="background:${colorCss(value)}"></i><span>${dash(value)}</span></span>`;
 }
 
-function photo(src: string, cls: string) {
+function photo(src: string, cls: string, empty: string) {
   if (src) return `<div class="${cls}-wrap"><img class="${cls}" src="${src}" alt="Photo"></div>`;
   const ph = cls.includes('opening') ? 'report-opening-placeholder' : 'report-photo-placeholder';
-  return `<div class="${ph}">Aucune photo</div>`;
+  return `<div class="${ph}">${empty}</div>`;
 }
 
 function logoImg(src: string) {
   return `<img src="${src}" class="report-logo" width="140" height="72" alt="NEHOC">`;
 }
 
-export async function buildReportHtml(site: Site): Promise<string> {
+export async function buildReportHtml(site: Site, locale: Locale = 'fr'): Promise<string> {
+  const t = (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) =>
+    translate(locale, key, vars);
+  const label = (value: string) => translateCatalog(locale, value);
+  const emptyPhoto = t('pdf.noPhoto');
   const logo = await loadLogoDataUrl();
   const general = await Promise.all(site.generalPhotos.map(toDataUrl));
   const rooms = await Promise.all(
@@ -85,20 +90,20 @@ export async function buildReportHtml(site: Site): Promise<string> {
     }))
   );
 
-  const date = new Date().toLocaleDateString('fr-FR');
+  const date = new Date().toLocaleDateString(dateLocale(locale));
   const reportNo = `${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${String(Date.now()).slice(-4)}`;
   const total = rooms.reduce((n, r) => n + r.openings.length, 0);
   const author = dash(authorFullName(site.author));
   const first = general[0] || '';
 
   const cover = `<section class="report-page report-cover">
-    <header class="report-header">${logoImg(logo)}<div class="report-brand"><strong>${author}</strong>Chef de projet<br>Menuiseries aluminium &amp; PVC<br>www.nehoc.fr</div><div class="report-id"><strong>RAPPORT</strong>N° ${reportNo}<br>${date}</div></header>
-    <div class="report-title"><h1>VISITE DE CHANTIER</h1><p>Relevé technique préalable à l'établissement du devis</p></div>
-    <div class="report-meta"><div><span class="report-label">Client</span><span class="report-value">${dash(site.clientName)}</span></div><div><span class="report-label">Adresse du chantier</span><span class="report-value">${dash(site.address)}</span></div><div><span class="report-label">Type de bien</span><span class="report-value">${dash(site.siteType)}</span></div><div><span class="report-label">Travaux</span><span class="report-value">${dash(site.workType)}</span></div></div>
-    <div class="report-overview"><div>${photo(first, 'report-main-photo')}</div><div class="report-summary"><h2 class="report-section-title">Synthèse</h2><div class="report-summary-row"><b>Responsable</b>${author}</div><div class="report-summary-row"><b>Contact client</b>${dash(site.clientPhone)}<br>${dash(site.clientEmail)}</div><div class="report-summary-row"><b>Pièces relevées</b>${rooms.length}</div><div class="report-summary-row"><b>Menuiseries relevées</b>${total}</div></div></div>
-    <div class="report-section"><h2 class="report-section-title">Observations générales</h2><div class="report-notes">${dash(site.generalNotes)}</div></div>
-    <div class="report-signatures"><div class="report-signature"><strong>Validation client</strong>Date et signature</div><div class="report-signature"><strong>${author}</strong>Chef de projet NEHOC</div></div>
-    <footer class="report-footer"><span>NEHOC — Rapport de visite confidentiel</span><span>www.nehoc.fr</span></footer>
+    <header class="report-header">${logoImg(logo)}<div class="report-brand"><strong>${author}</strong>${t('pdf.projectLead')}<br>${t('pdf.brandLine')}<br>www.nehoc.fr</div><div class="report-id"><strong>${t('pdf.report')}</strong>N° ${reportNo}<br>${date}</div></header>
+    <div class="report-title"><h1>${t('pdf.visitTitle')}</h1><p>${t('pdf.visitSub')}</p></div>
+    <div class="report-meta"><div><span class="report-label">${t('pdf.client')}</span><span class="report-value">${dash(site.clientName)}</span></div><div><span class="report-label">${t('pdf.address')}</span><span class="report-value">${dash(site.address)}</span></div><div><span class="report-label">${t('pdf.siteType')}</span><span class="report-value">${dash(label(site.siteType))}</span></div><div><span class="report-label">${t('pdf.works')}</span><span class="report-value">${dash(label(site.workType))}</span></div></div>
+    <div class="report-overview"><div>${photo(first, 'report-main-photo', emptyPhoto)}</div><div class="report-summary"><h2 class="report-section-title">${t('pdf.summary')}</h2><div class="report-summary-row"><b>${t('pdf.author')}</b>${author}</div><div class="report-summary-row"><b>${t('pdf.contact')}</b>${dash(site.clientPhone)}<br>${dash(site.clientEmail)}</div><div class="report-summary-row"><b>${t('pdf.roomsCounted')}</b>${rooms.length}</div><div class="report-summary-row"><b>${t('pdf.openingsCounted')}</b>${total}</div></div></div>
+    <div class="report-section"><h2 class="report-section-title">${t('pdf.generalNotes')}</h2><div class="report-notes">${dash(site.generalNotes)}</div></div>
+    <div class="report-signatures"><div class="report-signature"><strong>${t('pdf.clientSign')}</strong>${t('pdf.signDate')}</div><div class="report-signature"><strong>${author}</strong>${t('pdf.nehocLead')}</div></div>
+    <footer class="report-footer"><span>${t('pdf.footerConfidential')}</span><span>www.nehoc.fr</span></footer>
   </section>`;
 
   const roomsHtml = rooms
@@ -113,22 +118,23 @@ export async function buildReportHtml(site: Site): Promise<string> {
                 o.photos.length > 1
                   ? `<div class="report-thumbs">${o.photos
                       .slice(1, 8)
-                      .map((p) => `<img src="${p}" alt="Photo complémentaire">`)
+                      .map((p) => `<img src="${p}" alt="Photo">`)
                       .join('')}</div>`
                   : '';
-              return `<article class="report-opening"><div class="report-opening-media">${photo(o.photos[0] || '', 'report-opening-photo')}${thumbs}</div><div><div class="report-opening-title"><h3>${dash(o.type)} ${o.ref ? `— ${esc(o.ref)}` : ''}</h3><span class="report-badge">Menuiserie ${oi + 1}/${openings.length}</span></div><div class="report-specs"><div class="report-spec"><b>Dimensions</b><span>${dim}</span></div><div class="report-spec"><b>Quantité</b><span>${dash(o.quantity)}</span></div><div class="report-spec"><b>Type de pose</b><span>${dash(o.pose)}</span></div><div class="report-spec report-spec-color"><b>Couleur</b>${colorSwatch(o.colorRal)}</div><div class="report-spec"><b>Pièce</b><span>${dash(room.name)}</span></div></div><p class="report-opening-notes"><strong>Observations :</strong> ${dash(o.notes)}</p></div></article>`;
+              return `<article class="report-opening"><div class="report-opening-media">${photo(o.photos[0] || '', 'report-opening-photo', emptyPhoto)}${thumbs}</div><div><div class="report-opening-title"><h3>${dash(label(o.type))} ${o.ref ? `— ${esc(o.ref)}` : ''}</h3><span class="report-badge">${t('pdf.openingN', { n: oi + 1, total: openings.length })}</span></div><div class="report-specs"><div class="report-spec"><b>${t('pdf.dims')}</b><span>${dim}</span></div><div class="report-spec"><b>${t('pdf.qty')}</b><span>${dash(o.quantity)}</span></div><div class="report-spec"><b>${t('pdf.pose')}</b><span>${dash(label(o.pose))}</span></div><div class="report-spec report-spec-color"><b>${t('pdf.color')}</b>${colorSwatch(o.colorRal)}</div><div class="report-spec"><b>${t('pdf.room')}</b><span>${dash(room.name)}</span></div></div><p class="report-opening-notes"><strong>${t('pdf.obs')}</strong> ${dash(o.notes)}</p></div></article>`;
             })
             .join('')
-        : '<div class="report-notes" style="margin-top:5mm">Aucune menuiserie renseignée.</div>';
-      return `<div class="report-room"><div class="report-room-head"><h2>${dash(room.name || `Pièce ${ri + 1}`)}</h2><span>${openings.length} menuiserie${openings.length > 1 ? 's' : ''}${room.notes ? ` · ${esc(room.notes)}` : ''}</span></div>${items}</div>`;
+        : `<div class="report-notes" style="margin-top:5mm">${t('pdf.noOpening')}</div>`;
+      const roomMeta = openings.length > 1 ? t('pdf.roomMetaMany', { n: openings.length }) : t('pdf.roomMeta', { n: openings.length });
+      return `<div class="report-room"><div class="report-room-head"><h2>${dash(room.name || t('pdf.roomFallback', { n: ri + 1 }))}</h2><span>${roomMeta}${room.notes ? ` · ${esc(room.notes)}` : ''}</span></div>${items}</div>`;
     })
     .join('');
 
   const flow = roomsHtml
-    ? `<section class="report-page report-flow"><header class="report-header">${logoImg(logo)}<div class="report-brand"><strong>${author}</strong>Chef de projet<br>www.nehoc.fr</div><div class="report-id"><strong>RELEVÉ</strong>${dash(site.clientName)}<br>${date}</div></header>${roomsHtml}<footer class="report-footer"><span>NEHOC — Rapport de visite</span><span>www.nehoc.fr</span></footer></section>`
+    ? `<section class="report-page report-flow"><header class="report-header">${logoImg(logo)}<div class="report-brand"><strong>${author}</strong>${t('pdf.projectLead')}<br>www.nehoc.fr</div><div class="report-id"><strong>${t('pdf.survey')}</strong>${dash(site.clientName)}<br>${date}</div></header>${roomsHtml}<footer class="report-footer"><span>${t('pdf.footerVisit')}</span><span>www.nehoc.fr</span></footer></section>`
     : '';
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Rapport NEHOC — ${esc(site.clientName)}</title><style>
+  return `<!doctype html><html lang="${locale}"><head><meta charset="utf-8"><title>${t('pdf.docTitle', { name: esc(site.clientName) })}</title><style>
     *{box-sizing:border-box} html,body{margin:0;padding:0;height:auto}
     body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;color:#181818;background:#fff}
     .report-page{width:210mm;padding:11mm 13mm 9mm;display:flex;flex-direction:column}
