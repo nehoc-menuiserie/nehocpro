@@ -100,8 +100,8 @@ export function HomePage() {
       ...planSite,
       followUpStatus: SIGNED_STATUS,
       poseDate: plan.poseDate,
-      reminder1: plan.reminder1,
-      reminder2: plan.reminder2,
+      reminder1: '',
+      reminder2: '',
     };
     setPlanSite(null);
     try {

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { planCalendarHref } from '../calendar';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { FollowUpPicker } from '../components/FollowUpPicker';
 import { PosePlanModal } from '../components/PosePlanModal';
-import { Button, Card, ColorSwatch, DateTimeFields, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
+import { Button, Card, ColorSwatch, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
 import { useCatalog } from '../catalog';
 import { useSites } from '../context';
 import { SIGNED_STATUS, canAccessPosePlan, type FollowUpStatus, type PosePlan } from '../followUp';
@@ -76,8 +75,8 @@ export function SitePage() {
       ...site,
       followUpStatus: SIGNED_STATUS,
       poseDate: plan.poseDate,
-      reminder1: plan.reminder1,
-      reminder2: plan.reminder2,
+      reminder1: '',
+      reminder2: '',
     };
     setSite(next);
     setPlanOpen(false);
@@ -231,12 +230,6 @@ export function SitePage() {
           <p className="follow-hint">{t('plan.subtitle')}</p>
           <Field label={t('plan.poseDate')}>
             <Input type="date" value={site.poseDate} onChange={(e) => patch({ poseDate: e.target.value })} />
-          </Field>
-          <Field label={t('plan.reminder1')}>
-            <DateTimeFields value={site.reminder1} onChange={(reminder1) => patch({ reminder1 })} />
-          </Field>
-          <Field label={t('plan.reminder2')}>
-            <DateTimeFields value={site.reminder2} onChange={(reminder2) => patch({ reminder2 })} />
           </Field>
         </Card>
       ) : (
@@ -440,21 +433,7 @@ export function SitePage() {
 
       <div className="sticky-bar">
         {currentView === 'plan' ? (
-          <div className="sticky-stack">
-            <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
-            <a
-              className="btn btn-secondary"
-              href={site.poseDate && site.reminder1 && site.reminder2 ? planCalendarHref(site) : '#'}
-              onClick={(e) => {
-                if (!site.poseDate || !site.reminder1 || !site.reminder2) {
-                  e.preventDefault();
-                  alert(t('plan.needAll'));
-                }
-              }}
-            >
-              {t('plan.addCalendar')}
-            </a>
-          </div>
+          <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
         ) : (
           <>
             <div className="sticky-row">

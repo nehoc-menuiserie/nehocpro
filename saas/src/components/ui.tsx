@@ -46,39 +46,6 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input className="input" {...props} />;
 }
 
-function splitDateTime(value: string) {
-  const [date = '', timePart = ''] = String(value || '').split('T');
-  return { date, time: timePart.slice(0, 5) };
-}
-
-function joinDateTime(date: string, time: string) {
-  if (!date) return '';
-  return `${date}T${time || '08:00'}`;
-}
-
-export function DateTimeFields({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const { t } = useI18n();
-  const { date, time } = splitDateTime(value);
-  return (
-    <div className="datetime-pair">
-      <span className="datetime-slot">
-        <span className="label">{t('plan.day')}</span>
-        <Input type="date" value={date} onChange={(e) => onChange(joinDateTime(e.target.value, time))} />
-      </span>
-      <span className="datetime-slot">
-        <span className="label">{t('plan.hour')}</span>
-        <Input type="time" value={time} onChange={(e) => onChange(joinDateTime(date, e.target.value))} />
-      </span>
-    </div>
-  );
-}
-
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className="input textarea" {...props} />;
 }

@@ -201,7 +201,7 @@ img {
 }
 
 .site-page.is-plan {
-  padding-bottom: calc(196px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--sticky) + 24px);
 }
 
 .page.narrow {
@@ -1339,7 +1339,7 @@ input[type='time']::-webkit-datetime-edit {
   }
 
   .site-page.is-plan {
-    padding-bottom: calc(196px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--sticky) + 16px);
   }
 
   .plan-card .datetime-pair {

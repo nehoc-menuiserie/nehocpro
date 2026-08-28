@@ -1,7 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/nehoc-pose.ics", "destination": "/api/pose" },
-    { "source": "/api/pose.ics", "destination": "/api/pose" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
