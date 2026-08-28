@@ -186,6 +186,7 @@ export function SitePage() {
 
   return (
     <div className={`page site-page${currentView === 'plan' ? ' is-plan' : ''}`}>
+      <div className="site-body">
       <header className="page-head">
         <Button title={t('common.backHome')} variant="ghost" onClick={() => navigate('/')} />
         <div className="page-head-center">
@@ -428,6 +429,7 @@ export function SitePage() {
       ))}
       </>
       )}
+      </div>
 
       <div className="sticky-bar">
         {currentView === 'plan' ? (

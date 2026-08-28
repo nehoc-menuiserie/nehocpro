@@ -196,12 +196,20 @@ img {
 }
 
 .site-page {
-  padding-bottom: calc(252px + env(safe-area-inset-bottom));
+  padding-bottom: 0;
   overflow-x: hidden;
 }
 
+.site-body {
+  padding-bottom: calc(248px + env(safe-area-inset-bottom));
+}
+
 .site-page.is-plan {
-  padding-bottom: calc(var(--sticky) + 24px);
+  padding-bottom: 0;
+}
+
+.site-page.is-plan .site-body {
+  padding-bottom: calc(88px + env(safe-area-inset-bottom));
 }
 
 .page.narrow {
@@ -1034,7 +1042,7 @@ input[type='time']::-webkit-datetime-edit {
   left: 0;
   right: 0;
   z-index: 15;
-  margin: 0 -16px -40px;
+  margin: 0 -16px;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   background: rgba(11, 11, 12, 0.94);
   border-top: 1px solid var(--border);
@@ -1420,12 +1428,17 @@ input[type='time']::-webkit-datetime-edit {
     padding: 16px 16px 32px;
   }
 
-  .site-page {
-    padding-bottom: calc(252px + env(safe-area-inset-bottom));
+  .site-page,
+  .site-page.is-plan {
+    padding-bottom: 0;
   }
 
-  .site-page.is-plan {
-    padding-bottom: calc(var(--sticky) + 16px);
+  .site-body {
+    padding-bottom: calc(248px + env(safe-area-inset-bottom));
+  }
+
+  .site-page.is-plan .site-body {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 
   .plan-card .datetime-pair {
@@ -1496,6 +1509,11 @@ input[type='time']::-webkit-datetime-edit {
   .site-page,
   .site-page.is-plan {
     padding-bottom: 40px;
+  }
+
+  .site-body,
+  .site-page.is-plan .site-body {
+    padding-bottom: 0;
   }
 
   .plan-card .datetime-pair {
