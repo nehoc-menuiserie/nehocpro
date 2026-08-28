@@ -33,13 +33,15 @@ export function LoginPage() {
   return (
     <div className="login-gate">
       <form className="login-form" onSubmit={submit}>
-        <div className="lang-row">
+        <div className="login-lang">
           <LanguageSwitcher />
         </div>
-        <img src="/logo-nehoc.jpeg" alt="NEHOC" className="logo" />
-        <p className="kicker">{t('login.kicker')}</p>
-        <h1>{t('login.title')}</h1>
-        <p className="subtitle">{t('login.subtitle')}</p>
+        <div className="login-brand">
+          <img src="/logo-nehoc.jpeg" alt="NEHOC" className="logo" />
+          <p className="kicker">{t('login.kicker')}</p>
+          <h1>{t('login.title')}</h1>
+          <p className="subtitle">{t('login.subtitle')}</p>
+        </div>
         <Field label={t('login.email')}>
           <Input
             value={email}

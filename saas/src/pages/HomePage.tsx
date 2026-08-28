@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Button } from '../components/ui';
@@ -44,6 +44,12 @@ export function HomePage() {
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState('');
   const [planSite, setPlanSite] = useState<Site | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
 
   const formatDate = (iso: string) => {
     try {
@@ -164,12 +170,41 @@ export function HomePage() {
         <Button title={t('common.logout')} variant="outline" onClick={() => signOut()} />
       </div>
 
-      <input
-        className="input search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t('home.search')}
-      />
+      {searchOpen || query ? (
+        <div className="search-panel">
+          <input
+            ref={searchRef}
+            className="input search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('home.search')}
+            aria-label={t('home.search')}
+          />
+          <button
+            type="button"
+            className="search-close"
+            aria-label={t('home.searchClose')}
+            onClick={() => {
+              setQuery('');
+              setSearchOpen(false);
+            }}
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="search-toggle"
+          aria-label={t('home.searchOpen')}
+          onClick={() => setSearchOpen(true)}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M15.5 15.5 21 21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
 
       <div className="follow-filters" role="tablist" aria-label={t('home.filterAria')}>
         {FOLLOW_UP_FILTERS.map((item) => (

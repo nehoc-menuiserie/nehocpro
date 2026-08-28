@@ -335,7 +335,45 @@ h1 {
 }
 
 .search {
+  margin: 0;
+}
+
+.search-toggle {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 16px 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--silver-soft);
+  cursor: pointer;
+}
+
+.search-panel {
+  position: relative;
   margin-top: 16px;
+}
+
+.search-panel .input {
+  padding-right: 46px;
+}
+
+.search-close {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 .follow-filters {
@@ -1093,29 +1131,63 @@ input[type='time']::-webkit-datetime-edit {
 
 .login-gate {
   min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 24px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
   background: var(--bg);
 }
 
-.login-gate .login-form {
-  width: min(100%, 420px);
+.login-form {
+  width: min(100%, 400px);
+  margin: 0 auto;
+  padding: 28px 22px 24px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.login-lang {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 18px;
+}
+
+.login-brand {
+  text-align: center;
 }
 
 .login-gate .logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-  margin-bottom: 16px;
+  display: block;
+  width: 84px;
+  height: 84px;
+  border-radius: 20px;
+  margin: 0 auto 14px;
+}
+
+.login-form .kicker {
+  margin: 0;
+}
+
+.login-form h1 {
+  margin: 8px 0 0;
+  font-size: 26px;
+  letter-spacing: 2px;
+}
+
+.login-form .subtitle {
+  margin: 8px auto 20px;
+  max-width: 32ch;
+  text-align: center;
+}
+
+.login-form .field {
+  text-align: left;
 }
 
 .login-form .btn {
-  margin-top: 4px;
-}
-
-.login-form .lang-row {
-  margin: 0 0 12px;
+  margin-top: 8px;
 }
 
 .catalog-row {
