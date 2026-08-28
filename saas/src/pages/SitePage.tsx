@@ -182,7 +182,7 @@ export function SitePage() {
   };
 
   return (
-    <div className="page site-page">
+    <div className={`page site-page${view === 'plan' ? ' is-plan' : ''}`}>
       <header className="page-head">
         <Button title={t('common.backHome')} variant="ghost" onClick={() => navigate('/')} />
         <div className="page-head-center">
@@ -223,32 +223,18 @@ export function SitePage() {
       ) : null}
 
       {view === 'plan' ? (
-        <Card>
+        <Card className="plan-card">
           <SectionTitle>{t('plan.title')}</SectionTitle>
           <p className="follow-hint">{t('plan.subtitle')}</p>
-          <div className="form-grid">
-            <Field label={t('plan.poseDate')}>
-              <Input type="date" value={site.poseDate} onChange={(e) => patch({ poseDate: e.target.value })} />
-            </Field>
-            <Field label={t('plan.reminder1')} className="field-span">
-              <DateTimeFields value={site.reminder1} onChange={(reminder1) => patch({ reminder1 })} />
-            </Field>
-            <Field label={t('plan.reminder2')} className="field-span">
-              <DateTimeFields value={site.reminder2} onChange={(reminder2) => patch({ reminder2 })} />
-            </Field>
-          </div>
-          <a
-            className="btn btn-secondary plan-cal-btn"
-            href={site.poseDate && site.reminder1 && site.reminder2 ? planCalendarHref(site) : '#'}
-            onClick={(e) => {
-              if (!site.poseDate || !site.reminder1 || !site.reminder2) {
-                e.preventDefault();
-                alert(t('plan.needAll'));
-              }
-            }}
-          >
-            {t('plan.addCalendar')}
-          </a>
+          <Field label={t('plan.poseDate')}>
+            <Input type="date" value={site.poseDate} onChange={(e) => patch({ poseDate: e.target.value })} />
+          </Field>
+          <Field label={t('plan.reminder1')}>
+            <DateTimeFields value={site.reminder1} onChange={(reminder1) => patch({ reminder1 })} />
+          </Field>
+          <Field label={t('plan.reminder2')}>
+            <DateTimeFields value={site.reminder2} onChange={(reminder2) => patch({ reminder2 })} />
+          </Field>
         </Card>
       ) : (
       <>
@@ -451,7 +437,7 @@ export function SitePage() {
 
       <div className="sticky-bar">
         {view === 'plan' ? (
-          <div className="sticky-row">
+          <div className="sticky-stack">
             <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
             <a
               className="btn btn-secondary"
