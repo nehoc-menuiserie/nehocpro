@@ -7,7 +7,7 @@ import { PosePlanModal } from '../components/PosePlanModal';
 import { Button, Card, ColorSwatch, DateTimeFields, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
 import { useCatalog } from '../catalog';
 import { useSites } from '../context';
-import { SIGNED_STATUS, type FollowUpStatus, type PosePlan } from '../followUp';
+import { SIGNED_STATUS, canAccessPosePlan, type FollowUpStatus, type PosePlan } from '../followUp';
 import { composeClientName, createEmptyOpening, createEmptyRoom, createEmptySite, normalizeSite } from '../storage';
 import { LanguageSwitcher, useI18n } from '../i18n';
 import type { Opening, Room, Site } from '../types';
@@ -67,6 +67,7 @@ export function SitePage() {
       setPlanOpen(true);
       return;
     }
+    if (!canAccessPosePlan(followUpStatus)) setView('survey');
     patch({ followUpStatus });
   };
 
@@ -88,7 +89,8 @@ export function SitePage() {
     }
   };
 
-  const showPlanTab = site.followUpStatus === SIGNED_STATUS || Boolean(site.poseDate || site.reminder1 || site.reminder2);
+  const showPlanTab = canAccessPosePlan(site.followUpStatus);
+  const currentView = showPlanTab ? view : 'survey';
 
   const updateRoom = (roomId: string, partial: Partial<Room>) => {
     setSite((s) =>
@@ -182,7 +184,7 @@ export function SitePage() {
   };
 
   return (
-    <div className={`page site-page${view === 'plan' ? ' is-plan' : ''}`}>
+    <div className={`page site-page${currentView === 'plan' ? ' is-plan' : ''}`}>
       <header className="page-head">
         <Button title={t('common.backHome')} variant="ghost" onClick={() => navigate('/')} />
         <div className="page-head-center">
@@ -204,8 +206,8 @@ export function SitePage() {
           <button
             type="button"
             role="tab"
-            aria-selected={view === 'survey'}
-            className={view === 'survey' ? 'is-active' : ''}
+            aria-selected={currentView === 'survey'}
+            className={currentView === 'survey' ? 'is-active' : ''}
             onClick={() => setView('survey')}
           >
             {t('site.tabSurvey')}
@@ -213,8 +215,8 @@ export function SitePage() {
           <button
             type="button"
             role="tab"
-            aria-selected={view === 'plan'}
-            className={view === 'plan' ? 'is-active' : ''}
+            aria-selected={currentView === 'plan'}
+            className={currentView === 'plan' ? 'is-active' : ''}
             onClick={() => setView('plan')}
           >
             {t('site.tabPlan')}
@@ -222,7 +224,7 @@ export function SitePage() {
         </div>
       ) : null}
 
-      {view === 'plan' ? (
+      {currentView === 'plan' ? (
         <Card className="plan-card">
           <SectionTitle>{t('plan.title')}</SectionTitle>
           <p className="follow-hint">{t('plan.subtitle')}</p>
@@ -436,7 +438,7 @@ export function SitePage() {
       )}
 
       <div className="sticky-bar">
-        {view === 'plan' ? (
+        {currentView === 'plan' ? (
           <div className="sticky-stack">
             <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
             <a

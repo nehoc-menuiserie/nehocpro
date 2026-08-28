@@ -113,6 +113,12 @@ export function planFromSite(site: { poseDate?: string; reminder1?: string; remi
 
 export const SIGNED_STATUS = 'Devis signé';
 
+export const PLAN_STATUSES = ['Devis signé', 'Facturé', 'Payé'] as const;
+
+export function canAccessPosePlan(status: string) {
+  return (PLAN_STATUSES as readonly string[]).includes(status);
+}
+
 export function followUpFromRecord(status: unknown, notes: string): FollowUpStatus {
   const fromColumn = String(status || '').trim();
   if (isFollowUpStatus(fromColumn)) return fromColumn;

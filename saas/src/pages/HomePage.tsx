@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { Button } from '../components/ui';
-import { PosePlanModal } from '../components/PosePlanModal';
 import { SmartPhoto } from '../components/SmartPhoto';
 import { SwipeDeleteRow } from '../components/SwipeDeleteRow';
 import { authorFullName } from '../constants';
@@ -10,11 +9,9 @@ import { useSites } from '../context';
 import {
   FOLLOW_UP_FILTERS,
   FOLLOW_UP_STATUSES,
-  SIGNED_STATUS,
   followUpTone,
   matchesFollowUpFilter,
   type FollowUpStatus,
-  type PosePlan,
 } from '../followUp';
 import { LanguageSwitcher, useI18n, type MsgKey } from '../i18n';
 import type { Site } from '../types';
@@ -43,7 +40,6 @@ export function HomePage() {
   const [filter, setFilter] = useState('open');
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState('');
-  const [planSite, setPlanSite] = useState<Site | null>(null);
 
   const formatDate = (iso: string) => {
     try {
@@ -83,29 +79,8 @@ export function HomePage() {
 
   const changeStatus = async (site: Site, followUpStatus: FollowUpStatus) => {
     if (site.followUpStatus === followUpStatus) return;
-    if (followUpStatus === SIGNED_STATUS) {
-      setPlanSite(site);
-      return;
-    }
     try {
       await upsert({ ...site, followUpStatus });
-    } catch {
-      alert(t('home.followError'));
-    }
-  };
-
-  const confirmPlan = async (plan: PosePlan) => {
-    if (!planSite) return;
-    const next = {
-      ...planSite,
-      followUpStatus: SIGNED_STATUS,
-      poseDate: plan.poseDate,
-      reminder1: plan.reminder1,
-      reminder2: plan.reminder2,
-    };
-    setPlanSite(null);
-    try {
-      await upsert(next);
     } catch {
       alert(t('home.followError'));
     }
@@ -243,13 +218,6 @@ export function HomePage() {
       <Link to="/backoffice" className="footer-backoffice">
         {t('common.backoffice')}
       </Link>
-      {planSite ? (
-        <PosePlanModal
-          site={planSite}
-          onCancel={() => setPlanSite(null)}
-          onConfirm={confirmPlan}
-        />
-      ) : null}
     </div>
   );
 }
