@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { addPlanToPhone } from '../calendar';
+import { planCalendarHref } from '../calendar';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { FollowUpPicker } from '../components/FollowUpPicker';
 import { PosePlanModal } from '../components/PosePlanModal';
@@ -62,15 +62,6 @@ export function SitePage() {
 
   const patch = (partial: Partial<Site>) => setSite((s) => (s ? { ...s, ...partial } : s));
 
-  const openPlan = (next: Site) => {
-    try {
-      const how = addPlanToPhone(next);
-      if (how === 'downloaded') alert(t('plan.downloaded'));
-    } catch {
-      alert(t('plan.calendarError'));
-    }
-  };
-
   const requestStatus = (followUpStatus: FollowUpStatus) => {
     if (followUpStatus === SIGNED_STATUS && site.followUpStatus !== SIGNED_STATUS) {
       setPlanOpen(true);
@@ -90,7 +81,6 @@ export function SitePage() {
     setSite(next);
     setPlanOpen(false);
     setView('plan');
-    openPlan(next);
     try {
       await upsert(next);
     } catch (err) {
@@ -247,18 +237,20 @@ export function SitePage() {
               <DateTimeFields value={site.reminder2} onChange={(reminder2) => patch({ reminder2 })} />
             </Field>
           </div>
-          <Button
-            title={t('plan.addCalendar')}
-            variant="secondary"
-            className="plan-cal-btn"
-            onClick={() => {
+          <a
+            className="btn btn-secondary plan-cal-btn"
+            href={site.poseDate && site.reminder1 && site.reminder2 ? planCalendarHref(site) : '#'}
+            target="_blank"
+            rel="noopener"
+            onClick={(e) => {
               if (!site.poseDate || !site.reminder1 || !site.reminder2) {
+                e.preventDefault();
                 alert(t('plan.needAll'));
-                return;
               }
-              void openPlan(site);
             }}
-          />
+          >
+            {t('plan.addCalendar')}
+          </a>
         </Card>
       ) : (
       <>
@@ -463,17 +455,20 @@ export function SitePage() {
         {view === 'plan' ? (
           <div className="sticky-row">
             <Button title={saving ? t('common.saving') : t('common.save')} onClick={onSave} disabled={saving} />
-            <Button
-              title={t('plan.addCalendar')}
-              variant="secondary"
-              onClick={() => {
+            <a
+              className="btn btn-secondary"
+              href={site.poseDate && site.reminder1 && site.reminder2 ? planCalendarHref(site) : '#'}
+              target="_blank"
+              rel="noopener"
+              onClick={(e) => {
                 if (!site.poseDate || !site.reminder1 || !site.reminder2) {
+                  e.preventDefault();
                   alert(t('plan.needAll'));
-                  return;
                 }
-                void openPlan(site);
               }}
-            />
+            >
+              {t('plan.addCalendar')}
+            </a>
           </div>
         ) : (
           <>
@@ -490,8 +485,7 @@ export function SitePage() {
       </div>
       {planOpen ? (
         <PosePlanModal
-          clientName={site.clientName}
-          initial={{ poseDate: site.poseDate, reminder1: site.reminder1, reminder2: site.reminder2 }}
+          site={site}
           onCancel={() => setPlanOpen(false)}
           onConfirm={confirmPlan}
         />

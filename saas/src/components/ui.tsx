@@ -63,11 +63,18 @@ export function DateTimeFields({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useI18n();
   const { date, time } = splitDateTime(value);
   return (
     <div className="datetime-pair">
-      <Input type="date" value={date} onChange={(e) => onChange(joinDateTime(e.target.value, time))} />
-      <Input type="time" value={time} onChange={(e) => onChange(joinDateTime(date, e.target.value))} />
+      <span className="datetime-slot">
+        <span className="label">{t('plan.day')}</span>
+        <Input type="date" value={date} onChange={(e) => onChange(joinDateTime(e.target.value, time))} />
+      </span>
+      <span className="datetime-slot">
+        <span className="label">{t('plan.hour')}</span>
+        <Input type="time" value={time} onChange={(e) => onChange(joinDateTime(date, e.target.value))} />
+      </span>
     </div>
   );
 }

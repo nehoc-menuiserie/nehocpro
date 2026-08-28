@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth';
-import { addPlanToPhone } from '../calendar';
 import { Button } from '../components/ui';
 import { PosePlanModal } from '../components/PosePlanModal';
 import { SmartPhoto } from '../components/SmartPhoto';
@@ -45,15 +44,6 @@ export function HomePage() {
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState('');
   const [planSite, setPlanSite] = useState<Site | null>(null);
-
-  const openPlan = (next: Site) => {
-    try {
-      const how = addPlanToPhone(next);
-      if (how === 'downloaded') alert(t('plan.downloaded'));
-    } catch {
-      alert(t('plan.calendarError'));
-    }
-  };
 
   const formatDate = (iso: string) => {
     try {
@@ -114,7 +104,6 @@ export function HomePage() {
       reminder2: plan.reminder2,
     };
     setPlanSite(null);
-    openPlan(next);
     try {
       await upsert(next);
     } catch {
@@ -256,8 +245,7 @@ export function HomePage() {
       </Link>
       {planSite ? (
         <PosePlanModal
-          clientName={planSite.clientName}
-          initial={{ poseDate: planSite.poseDate, reminder1: planSite.reminder1, reminder2: planSite.reminder2 }}
+          site={planSite}
           onCancel={() => setPlanSite(null)}
           onConfirm={confirmPlan}
         />

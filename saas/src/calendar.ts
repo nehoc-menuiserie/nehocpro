@@ -25,14 +25,14 @@ function pad(n: number) {
 function dateTimeValue(local: string) {
   const d = new Date(local);
   if (Number.isNaN(d.getTime())) return '';
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 }
 
 function addMinutesValue(local: string, minutes: number) {
   const d = new Date(local);
   if (Number.isNaN(d.getTime())) return '';
   d.setMinutes(d.getMinutes() + minutes);
-  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 }
 
 function eventBlock({
@@ -140,30 +140,41 @@ function isAppleMobile() {
   return /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-function clickLink(href: string, filename?: string) {
-  const a = document.createElement('a');
-  a.href = href;
-  if (filename) a.download = filename;
-  a.rel = 'noopener';
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+export function encodeIcsParam(ics: string) {
+  const bytes = new TextEncoder().encode(ics);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+export function planCalendarHref(site: Site) {
+  return `/nehoc-pose.ics?d=${encodeIcsParam(buildPlanIcs(site))}`;
 }
 
 export function addPlanToPhone(site: Site): 'calendar' | 'downloaded' {
-  const ics = buildPlanIcs(site);
-  const safe = (site.clientName || 'chantier').replace(/[^\w\-]+/g, '_');
-  const filename = `NEHOC-pose-${safe}.ics`;
-
-  if (isAppleMobile()) {
-    clickLink('data:text/calendar;charset=utf-8,' + encodeURIComponent(ics));
+  const href = planCalendarHref(site);
+  if (typeof window !== 'undefined' && (isAppleMobile() || /Android/i.test(navigator.userAgent))) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
     return 'calendar';
   }
 
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const blob = new Blob([buildPlanIcs(site)], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  clickLink(url, filename);
+  const safe = (site.clientName || 'chantier').replace(/[^\w\-]+/g, '_');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `NEHOC-pose-${safe}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
   return 'downloaded';
 }
