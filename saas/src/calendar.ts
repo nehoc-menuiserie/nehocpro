@@ -134,47 +134,26 @@ export function buildPlanIcs(site: Site) {
   ].join('\r\n');
 }
 
-function isAppleMobile() {
-  if (typeof navigator === 'undefined') return false;
-  const ua = navigator.userAgent || '';
-  return /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
+export type PlanPayload = {
+  n: string;
+  a: string;
+  p: string;
+  pose: string;
+  r1: string;
+  r2: string;
+};
 
-export function encodeIcsParam(ics: string) {
-  const bytes = new TextEncoder().encode(ics);
-  let binary = '';
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+export function planPayload(site: Site): PlanPayload {
+  return {
+    n: site.clientName || '',
+    a: site.address || '',
+    p: site.clientPhone || '',
+    pose: site.poseDate || '',
+    r1: site.reminder1 || '',
+    r2: site.reminder2 || '',
+  };
 }
 
 export function planCalendarHref(site: Site) {
-  return `/nehoc-pose.ics?d=${encodeIcsParam(buildPlanIcs(site))}`;
-}
-
-export function addPlanToPhone(site: Site): 'calendar' | 'downloaded' {
-  const href = planCalendarHref(site);
-  if (typeof window !== 'undefined' && (isAppleMobile() || /Android/i.test(navigator.userAgent))) {
-    const a = document.createElement('a');
-    a.href = href;
-    a.target = '_blank';
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    return 'calendar';
-  }
-
-  const blob = new Blob([buildPlanIcs(site)], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const safe = (site.clientName || 'chantier').replace(/[^\w\-]+/g, '_');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `NEHOC-pose-${safe}.ics`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-  return 'downloaded';
+  return `/pose-calendar.html#${encodeURIComponent(JSON.stringify(planPayload(site)))}`;
 }

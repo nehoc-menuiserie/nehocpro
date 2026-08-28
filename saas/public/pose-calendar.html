@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B0B0C" />
+    <title>Calendrier NEHOC</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+      body {
+        min-height: 100dvh;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+        background: #0b0b0c;
+        color: #f4f1ea;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+      main { width: min(100%, 400px); margin: 0 auto; }
+      .kicker { margin: 0; color: #c9c4b8; font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; }
+      h1 { margin: 6px 0 10px; font-size: 22px; }
+      p { color: #9a9790; line-height: 1.45; }
+      .btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        margin: 10px 0 0;
+        padding: 14px 12px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        font-size: 16px;
+        font-weight: 700;
+        text-decoration: none;
+        text-align: center;
+      }
+      .primary { background: #e8e4dc; color: #0b0b0c; }
+      .secondary { background: #1e1e22; color: #f4f1ea; border-color: #2c2c32; }
+      .ghost { background: transparent; color: #c9c4b8; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="kicker" id="client">NEHOC</p>
+      <h1>Ajouter au calendrier</h1>
+      <p>Touchez le bouton pour enregistrer la pose et les deux rappels dans Calendrier iPhone. Choisissez ensuite <strong>Ajouter</strong>.</p>
+      <a class="btn primary" id="apple" href="#">Ajouter dans Calendrier</a>
+      <a class="btn secondary" id="g1" href="#" target="_blank" rel="noopener">Pose (Google Agenda)</a>
+      <a class="btn secondary" id="g2" href="#" target="_blank" rel="noopener">Rappel 1 (Google Agenda)</a>
+      <a class="btn secondary" id="g3" href="#" target="_blank" rel="noopener">Rappel 2 (Google Agenda)</a>
+      <a class="btn ghost" href="/">Retour à NEHOCPRO</a>
+    </main>
+    <script>
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function esc(v) { return String(v || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
+      function nextDay(iso) {
+        const [y, m, d] = iso.split('-').map(Number);
+        const n = new Date(y, (m || 1) - 1, (d || 1) + 1);
+        return n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
+      }
+      function utc(local, extraMin) {
+        const d = new Date(local);
+        if (Number.isNaN(d.getTime())) return '';
+        if (extraMin) d.setMinutes(d.getMinutes() + extraMin);
+        return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+      }
+      function gDate(iso) { return iso.replace(/-/g, ''); }
+      function gUtc(local, extraMin) { return utc(local, extraMin).replace(/Z$/, '') + 'Z'; }
+      function google(title, dates, details, loc) {
+        return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
+          + '&text=' + encodeURIComponent(title)
+          + '&dates=' + dates
+          + '&details=' + encodeURIComponent(details)
+          + '&location=' + encodeURIComponent(loc);
+      }
+      function event(uid, summary, desc, loc, start, end, allDay) {
+        return [
+          'BEGIN:VEVENT',
+          'UID:' + uid,
+          'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z'),
+          allDay ? 'DTSTART;VALUE=DATE:' + start : 'DTSTART:' + start,
+          allDay ? 'DTEND;VALUE=DATE:' + end : 'DTEND:' + end,
+          'SUMMARY:' + esc(summary),
+          'DESCRIPTION:' + esc(desc),
+          'LOCATION:' + esc(loc),
+          'BEGIN:VALARM',
+          allDay ? 'TRIGGER:PT8H' : 'TRIGGER:PT0S',
+          'ACTION:DISPLAY',
+          'DESCRIPTION:' + esc(summary),
+          'END:VALARM',
+          'END:VEVENT'
+        ].join('\r\n');
+      }
+      try {
+        var data = JSON.parse(decodeURIComponent((location.hash || '#').slice(1) || '{}'));
+        var name = data.n || 'Client';
+        var loc = data.a || '';
+        var desc = [name, loc, data.p].filter(Boolean).join(' — ');
+        document.getElementById('client').textContent = name;
+        var events = [];
+        if (data.pose) {
+          events.push(event('pose@nehocpro', 'Pose NEHOC — ' + name, desc, loc, data.pose.replace(/-/g, ''), nextDay(data.pose).replace(/-/g, ''), true));
+          document.getElementById('g1').href = google('Pose NEHOC — ' + name, gDate(data.pose) + '/' + gDate(nextDay(data.pose)), desc, loc);
+        }
+        if (data.r1) {
+          events.push(event('r1@nehocpro', 'Rappel 1 NEHOC — ' + name, desc, loc, utc(data.r1), utc(data.r1, 30), false));
+          document.getElementById('g2').href = google('Rappel 1 NEHOC — ' + name, gUtc(data.r1) + '/' + gUtc(data.r1, 30), desc, loc);
+        }
+        if (data.r2) {
+          events.push(event('r2@nehocpro', 'Rappel 2 NEHOC — ' + name, desc, loc, utc(data.r2), utc(data.r2, 30), false));
+          document.getElementById('g3').href = google('Rappel 2 NEHOC — ' + name, gUtc(data.r2) + '/' + gUtc(data.r2, 30), desc, loc);
+        }
+        var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//NEHOC//NEHOCPRO//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'].concat(events).concat(['END:VCALENDAR']).join('\r\n');
+        document.getElementById('apple').href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+      } catch (err) {
+        document.querySelector('p').textContent = 'Impossible de préparer le calendrier. Revenez au chantier.';
+      }
+    </script>
+  </body>
+</html>

@@ -240,8 +240,6 @@ export function SitePage() {
           <a
             className="btn btn-secondary plan-cal-btn"
             href={site.poseDate && site.reminder1 && site.reminder2 ? planCalendarHref(site) : '#'}
-            target="_blank"
-            rel="noopener"
             onClick={(e) => {
               if (!site.poseDate || !site.reminder1 || !site.reminder2) {
                 e.preventDefault();
@@ -458,8 +456,6 @@ export function SitePage() {
             <a
               className="btn btn-secondary"
               href={site.poseDate && site.reminder1 && site.reminder2 ? planCalendarHref(site) : '#'}
-              target="_blank"
-              rel="noopener"
               onClick={(e) => {
                 if (!site.poseDate || !site.reminder1 || !site.reminder2) {
                   e.preventDefault();
