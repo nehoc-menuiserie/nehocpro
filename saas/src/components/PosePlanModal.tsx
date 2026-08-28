@@ -15,7 +15,7 @@ export function PosePlanModal({
 }: {
   site: Site;
   onCancel: () => void;
-  onConfirm: (plan: PosePlan) => void;
+  onConfirm: (plan: PosePlan) => void | Promise<void>;
 }) {
   const { t } = useI18n();
   const [poseDate, setPoseDate] = useState(site.poseDate || '');
@@ -58,13 +58,18 @@ export function PosePlanModal({
           <a
             className="btn btn-primary"
             href={ready ? planCalendarHref(draft) : '#'}
-            onClick={(e) => {
+            onClick={async (e) => {
+              e.preventDefault();
               if (!ready) {
-                e.preventDefault();
                 alert(t('plan.needAll'));
                 return;
               }
-              onConfirm({ poseDate, reminder1, reminder2 });
+              try {
+                await onConfirm({ poseDate, reminder1, reminder2 });
+                window.location.assign(planCalendarHref(draft));
+              } catch {
+                // save already showed an error
+              }
             }}
           >
             {t('plan.confirm')}

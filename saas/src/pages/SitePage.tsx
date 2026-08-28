@@ -86,6 +86,7 @@ export function SitePage() {
       await upsert(next);
     } catch (err) {
       alert(err instanceof Error ? err.message : t('site.saveError'));
+      throw err;
     }
   };
 

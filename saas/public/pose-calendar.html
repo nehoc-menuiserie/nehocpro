@@ -34,7 +34,6 @@
         text-align: center;
       }
       .primary { background: #e8e4dc; color: #0b0b0c; }
-      .secondary { background: #1e1e22; color: #f4f1ea; border-color: #2c2c32; }
       .ghost { background: transparent; color: #c9c4b8; }
     </style>
   </head>
@@ -42,78 +41,31 @@
     <main>
       <p class="kicker" id="client">NEHOC</p>
       <h1>Ajouter au calendrier</h1>
-      <p>Touchez le bouton pour enregistrer la pose et les deux rappels dans Calendrier iPhone. Choisissez ensuite <strong>Ajouter</strong>.</p>
+      <p>Touchez le bouton. Safari demandera d’autoriser, puis Calendrier proposera <strong>Ajouter</strong> pour la pose et les deux rappels.</p>
       <a class="btn primary" id="apple" href="#">Ajouter dans Calendrier</a>
-      <a class="btn secondary" id="g1" href="#" target="_blank" rel="noopener">Pose (Google Agenda)</a>
-      <a class="btn secondary" id="g2" href="#" target="_blank" rel="noopener">Rappel 1 (Google Agenda)</a>
-      <a class="btn secondary" id="g3" href="#" target="_blank" rel="noopener">Rappel 2 (Google Agenda)</a>
       <a class="btn ghost" href="/">Retour à NEHOCPRO</a>
     </main>
     <script>
-      function pad(n) { return String(n).padStart(2, '0'); }
-      function esc(v) { return String(v || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
-      function nextDay(iso) {
-        const [y, m, d] = iso.split('-').map(Number);
-        const n = new Date(y, (m || 1) - 1, (d || 1) + 1);
-        return n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
-      }
-      function utc(local, extraMin) {
-        const d = new Date(local);
-        if (Number.isNaN(d.getTime())) return '';
-        if (extraMin) d.setMinutes(d.getMinutes() + extraMin);
-        return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
-      }
-      function gDate(iso) { return iso.replace(/-/g, ''); }
-      function gUtc(local, extraMin) { return utc(local, extraMin).replace(/Z$/, '') + 'Z'; }
-      function google(title, dates, details, loc) {
-        return 'https://calendar.google.com/calendar/render?action=TEMPLATE'
-          + '&text=' + encodeURIComponent(title)
-          + '&dates=' + dates
-          + '&details=' + encodeURIComponent(details)
-          + '&location=' + encodeURIComponent(loc);
-      }
-      function event(uid, summary, desc, loc, start, end, allDay) {
-        return [
-          'BEGIN:VEVENT',
-          'UID:' + uid,
-          'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z'),
-          allDay ? 'DTSTART;VALUE=DATE:' + start : 'DTSTART:' + start,
-          allDay ? 'DTEND;VALUE=DATE:' + end : 'DTEND:' + end,
-          'SUMMARY:' + esc(summary),
-          'DESCRIPTION:' + esc(desc),
-          'LOCATION:' + esc(loc),
-          'BEGIN:VALARM',
-          allDay ? 'TRIGGER:PT8H' : 'TRIGGER:PT0S',
-          'ACTION:DISPLAY',
-          'DESCRIPTION:' + esc(summary),
-          'END:VALARM',
-          'END:VEVENT'
-        ].join('\r\n');
-      }
-      try {
-        var data = JSON.parse(decodeURIComponent((location.hash || '#').slice(1) || '{}'));
-        var name = data.n || 'Client';
-        var loc = data.a || '';
-        var desc = [name, loc, data.p].filter(Boolean).join(' — ');
-        document.getElementById('client').textContent = name;
-        var events = [];
-        if (data.pose) {
-          events.push(event('pose@nehocpro', 'Pose NEHOC — ' + name, desc, loc, data.pose.replace(/-/g, ''), nextDay(data.pose).replace(/-/g, ''), true));
-          document.getElementById('g1').href = google('Pose NEHOC — ' + name, gDate(data.pose) + '/' + gDate(nextDay(data.pose)), desc, loc);
+      function fromHash() {
+        try {
+          return JSON.parse(decodeURIComponent((location.hash || '#').slice(1) || '{}'));
+        } catch {
+          return {};
         }
-        if (data.r1) {
-          events.push(event('r1@nehocpro', 'Rappel 1 NEHOC — ' + name, desc, loc, utc(data.r1), utc(data.r1, 30), false));
-          document.getElementById('g2').href = google('Rappel 1 NEHOC — ' + name, gUtc(data.r1) + '/' + gUtc(data.r1, 30), desc, loc);
-        }
-        if (data.r2) {
-          events.push(event('r2@nehocpro', 'Rappel 2 NEHOC — ' + name, desc, loc, utc(data.r2), utc(data.r2, 30), false));
-          document.getElementById('g3').href = google('Rappel 2 NEHOC — ' + name, gUtc(data.r2) + '/' + gUtc(data.r2, 30), desc, loc);
-        }
-        var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//NEHOC//NEHOCPRO//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'].concat(events).concat(['END:VCALENDAR']).join('\r\n');
-        document.getElementById('apple').href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
-      } catch (err) {
-        document.querySelector('p').textContent = 'Impossible de préparer le calendrier. Revenez au chantier.';
       }
+      var q = new URLSearchParams(location.search);
+      var data = fromHash();
+      if (!q.get('pose') && data.pose) {
+        if (data.id) q.set('id', data.id);
+        if (data.n) q.set('n', data.n);
+        if (data.a) q.set('a', data.a);
+        if (data.p) q.set('p', data.p);
+        if (data.pose) q.set('pose', data.pose);
+        if (data.r1) q.set('r1', data.r1);
+        if (data.r2) q.set('r2', data.r2);
+      }
+      document.getElementById('client').textContent = q.get('n') || data.n || 'Client';
+      document.getElementById('apple').href = '/nehoc-pose.ics?' + q.toString();
     </script>
   </body>
 </html>

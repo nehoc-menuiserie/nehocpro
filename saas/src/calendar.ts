@@ -135,6 +135,7 @@ export function buildPlanIcs(site: Site) {
 }
 
 export type PlanPayload = {
+  id: string;
   n: string;
   a: string;
   p: string;
@@ -145,6 +146,7 @@ export type PlanPayload = {
 
 export function planPayload(site: Site): PlanPayload {
   return {
+    id: site.id || '',
     n: site.clientName || '',
     a: site.address || '',
     p: site.clientPhone || '',
@@ -155,5 +157,14 @@ export function planPayload(site: Site): PlanPayload {
 }
 
 export function planCalendarHref(site: Site) {
-  return `/pose-calendar.html#${encodeURIComponent(JSON.stringify(planPayload(site)))}`;
+  const p = planPayload(site);
+  const q = new URLSearchParams();
+  if (p.id) q.set('id', p.id);
+  if (p.n) q.set('n', p.n);
+  if (p.a) q.set('a', p.a);
+  if (p.p) q.set('p', p.p);
+  if (p.pose) q.set('pose', p.pose);
+  if (p.r1) q.set('r1', p.r1);
+  if (p.r2) q.set('r2', p.r2);
+  return `/nehoc-pose.ics?${q.toString()}`;
 }
