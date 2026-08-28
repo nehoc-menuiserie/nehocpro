@@ -1,7 +1,8 @@
-import { Button, Field, Input } from './ui';
+import { createPortal } from 'react-dom';
+import { useState } from 'react';
+import { Button, DateTimeFields, Field, Input } from './ui';
 import { useI18n } from '../i18n';
 import type { PosePlan } from '../followUp';
-import { useState } from 'react';
 
 export function PosePlanModal({
   clientName,
@@ -20,14 +21,15 @@ export function PosePlanModal({
   const [reminder2, setReminder2] = useState(initial?.reminder2 || '');
 
   const submit = () => {
-    if (!poseDate.trim() || !reminder1.trim() || !reminder2.trim()) {
+    const complete = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+    if (!poseDate.trim() || !complete.test(reminder1) || !complete.test(reminder2)) {
       alert(t('plan.needAll'));
       return;
     }
     onConfirm({ poseDate, reminder1, reminder2 });
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onCancel} role="presentation">
       <div
         className="modal-card"
@@ -42,10 +44,10 @@ export function PosePlanModal({
           <Input type="date" value={poseDate} onChange={(e) => setPoseDate(e.target.value)} />
         </Field>
         <Field label={t('plan.reminder1')}>
-          <Input type="datetime-local" value={reminder1} onChange={(e) => setReminder1(e.target.value)} />
+          <DateTimeFields value={reminder1} onChange={setReminder1} />
         </Field>
         <Field label={t('plan.reminder2')}>
-          <Input type="datetime-local" value={reminder2} onChange={(e) => setReminder2(e.target.value)} />
+          <DateTimeFields value={reminder2} onChange={setReminder2} />
         </Field>
         <p className="hint">{t('plan.hint')}</p>
         <div className="sticky-row">
@@ -53,6 +55,7 @@ export function PosePlanModal({
           <Button title={t('plan.confirm')} onClick={submit} />
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

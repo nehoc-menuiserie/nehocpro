@@ -4,7 +4,7 @@ import { addPlanToPhone } from '../calendar';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { FollowUpPicker } from '../components/FollowUpPicker';
 import { PosePlanModal } from '../components/PosePlanModal';
-import { Button, Card, ColorSwatch, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
+import { Button, Card, ColorSwatch, DateTimeFields, Field, Input, SectionTitle, Select, Textarea } from '../components/ui';
 import { useCatalog } from '../catalog';
 import { useSites } from '../context';
 import { SIGNED_STATUS, type FollowUpStatus, type PosePlan } from '../followUp';
@@ -241,10 +241,10 @@ export function SitePage() {
               <Input type="date" value={site.poseDate} onChange={(e) => patch({ poseDate: e.target.value })} />
             </Field>
             <Field label={t('plan.reminder1')} className="field-span">
-              <Input type="datetime-local" value={site.reminder1} onChange={(e) => patch({ reminder1: e.target.value })} />
+              <DateTimeFields value={site.reminder1} onChange={(reminder1) => patch({ reminder1 })} />
             </Field>
             <Field label={t('plan.reminder2')} className="field-span">
-              <Input type="datetime-local" value={site.reminder2} onChange={(e) => patch({ reminder2: e.target.value })} />
+              <DateTimeFields value={site.reminder2} onChange={(reminder2) => patch({ reminder2 })} />
             </Field>
           </div>
           <Button

@@ -134,42 +134,36 @@ export function buildPlanIcs(site: Site) {
   ].join('\r\n');
 }
 
-export function encodeIcsParam(ics: string) {
-  const bytes = new TextEncoder().encode(ics);
-  let binary = '';
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function isMobileDevice() {
+function isAppleMobile() {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
-  return /Android|iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
-function openCalendarUrl(url: string) {
-  const opened = window.open(url, '_blank', 'noopener,noreferrer');
-  if (opened) return;
-  window.location.assign(url);
+function clickLink(href: string, filename?: string) {
+  const a = document.createElement('a');
+  a.href = href;
+  if (filename) a.download = filename;
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 export function addPlanToPhone(site: Site): 'calendar' | 'downloaded' {
   const ics = buildPlanIcs(site);
-  if (isMobileDevice()) {
-    openCalendarUrl(`/api/ics?d=${encodeIcsParam(ics)}`);
+  const safe = (site.clientName || 'chantier').replace(/[^\w\-]+/g, '_');
+  const filename = `NEHOC-pose-${safe}.ics`;
+
+  if (isAppleMobile()) {
+    clickLink('data:text/calendar;charset=utf-8,' + encodeURIComponent(ics));
     return 'calendar';
   }
+
   const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  const safe = (site.clientName || 'chantier').replace(/[^\w\-]+/g, '_');
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `NEHOC-pose-${safe}.ics`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  clickLink(url, filename);
   window.setTimeout(() => URL.revokeObjectURL(url), 1500);
   return 'downloaded';
 }
