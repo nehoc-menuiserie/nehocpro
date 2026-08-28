@@ -39,20 +39,21 @@ export function PosePlanModal({
         aria-labelledby="plan-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="kicker">{site.clientName || t('home.noName')}</p>
-        <h2 id="plan-title">{t('plan.title')}</h2>
-        <p className="subtitle">{t('plan.subtitle')}</p>
-        <Field label={t('plan.poseDate')}>
-          <Input type="date" value={poseDate} onChange={(e) => setPoseDate(e.target.value)} />
-        </Field>
-        <Field label={t('plan.reminder1')}>
-          <DateTimeFields value={reminder1} onChange={setReminder1} />
-        </Field>
-        <Field label={t('plan.reminder2')}>
-          <DateTimeFields value={reminder2} onChange={setReminder2} />
-        </Field>
-        <p className="hint">{t('plan.hint')}</p>
-        <div className="sticky-row">
+        <div className="modal-card-body">
+          <p className="kicker">{site.clientName || t('home.noName')}</p>
+          <h2 id="plan-title">{t('plan.title')}</h2>
+          <p className="subtitle">{t('plan.subtitleShort')}</p>
+          <Field label={t('plan.poseDate')}>
+            <Input type="date" value={poseDate} onChange={(e) => setPoseDate(e.target.value)} />
+          </Field>
+          <Field label={t('plan.reminder1')}>
+            <DateTimeFields value={reminder1} onChange={setReminder1} />
+          </Field>
+          <Field label={t('plan.reminder2')}>
+            <DateTimeFields value={reminder2} onChange={setReminder2} />
+          </Field>
+        </div>
+        <div className="modal-card-actions">
           <Button title={t('plan.cancel')} variant="outline" onClick={onCancel} />
           <a
             className="btn btn-primary"
