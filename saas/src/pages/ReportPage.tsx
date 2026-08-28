@@ -17,6 +17,40 @@ function WhatsAppIcon() {
   );
 }
 
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"
+      />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M4 5h16a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2zm0 2v.2l8 5.3 8-5.3V7H4zm16 10V9.5l-7.4 4.9a1 1 0 01-1.2 0L4 9.5V17h16z"
+      />
+    </svg>
+  );
+}
+
+function telHref(phone: string) {
+  const clean = (phone || '').replace(/[^\d+]/g, '');
+  return clean ? `tel:${clean}` : '';
+}
+
+function mailHref(email: string, clientName: string) {
+  const to = (email || '').trim();
+  if (!to || !to.includes('@')) return '';
+  const subject = encodeURIComponent(`NEHOC — ${clientName || 'Chantier'}`);
+  return `mailto:${to}?subject=${subject}`;
+}
+
 export function ReportPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -152,6 +186,30 @@ export function ReportPage() {
       </div>
 
       <div className="report-actions">
+        <div className="report-contact">
+          {telHref(site.clientPhone) ? (
+            <a className="btn btn-call" href={telHref(site.clientPhone)}>
+              <PhoneIcon />
+              Appeler
+            </a>
+          ) : (
+            <button type="button" className="btn btn-call" disabled>
+              <PhoneIcon />
+              Pas de téléphone
+            </button>
+          )}
+          {mailHref(site.clientEmail, site.clientName) ? (
+            <a className="btn btn-mail" href={mailHref(site.clientEmail, site.clientName)}>
+              <MailIcon />
+              E-mail
+            </a>
+          ) : (
+            <button type="button" className="btn btn-mail" disabled>
+              <MailIcon />
+              Pas d’e-mail
+            </button>
+          )}
+        </div>
         <Button title="Imprimer / enregistrer en PDF" onClick={printPreview} disabled={busy || !html} />
         <button
           type="button"

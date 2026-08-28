@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SmartImage } from '../components/SmartImage';
 import { Button, ColorSwatch } from '../components/ui';
@@ -31,6 +31,36 @@ export function ReportScreen({ navigation, route }: ReportProps) {
       </View>
     );
   }
+
+  const tel = (site.clientPhone || '').replace(/[^\d+]/g, '');
+  const mail = (site.clientEmail || '').trim();
+
+  const callClient = async () => {
+    if (!tel) {
+      Alert.alert('Téléphone', 'Ajoutez le numéro du client sur la fiche chantier.');
+      return;
+    }
+    const url = `tel:${tel}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Téléphone', 'Impossible d’ouvrir l’appel.');
+    }
+  };
+
+  const emailClient = async () => {
+    if (!mail || !mail.includes('@')) {
+      Alert.alert('E-mail', 'Ajoutez l’e-mail du client sur la fiche chantier.');
+      return;
+    }
+    const subject = encodeURIComponent(`NEHOC — ${site.clientName || 'Chantier'}`);
+    const url = `mailto:${mail}?subject=${subject}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('E-mail', 'Impossible d’ouvrir la messagerie.');
+    }
+  };
 
   const sharePdf = async () => {
     try {
@@ -69,6 +99,22 @@ export function ReportScreen({ navigation, route }: ReportProps) {
           <Text style={styles.meta}>
             {authorFullName(site.author)} · {site.siteType} · {site.workType}
           </Text>
+        </View>
+
+        <View style={styles.contactRow}>
+          <Button
+            title={tel ? 'Appeler' : 'Pas de téléphone'}
+            onPress={callClient}
+            disabled={!tel}
+            style={styles.contactBtn}
+          />
+          <Button
+            title={mail.includes('@') ? 'E-mail' : 'Pas d’e-mail'}
+            variant="secondary"
+            onPress={emailClient}
+            disabled={!mail || !mail.includes('@')}
+            style={styles.contactBtn}
+          />
         </View>
 
         <View style={styles.pills}>
@@ -161,6 +207,8 @@ const styles = StyleSheet.create({
   },
   client: { color: colors.text, fontSize: 26, fontWeight: '800', marginTop: 6, textAlign: 'center' },
   meta: { color: colors.muted, marginTop: 4, textAlign: 'center' },
+  contactRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  contactBtn: { flex: 1 },
   pills: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   pill: {
     flex: 1,

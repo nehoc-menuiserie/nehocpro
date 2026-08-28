@@ -898,6 +898,35 @@ h1 {
   margin-bottom: 16px;
 }
 
+.report-contact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn-call,
+.btn-mail {
+  gap: 8px;
+}
+
+.btn-call {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.btn-call:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-mail {
+  background: var(--silver-soft);
+  color: var(--bg);
+}
+
+.btn-mail:hover:not(:disabled) {
+  background: #fff;
+}
+
 .report-actions .hint {
   margin: 4px 0 0;
   text-align: center;
